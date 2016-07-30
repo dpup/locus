@@ -20,8 +20,13 @@ func (fn RequestMatcherFn) Matches(req http.Request) bool {
 	return fn(req)
 }
 
+// MatchAll implements RequestMatcher interface and matches all requests.
+var MatchAll = RequestMatcherFn(func(req http.Request) bool {
+	return true
+})
+
 type urlMatcher struct {
-	url      url.URL
+	url      *url.URL
 	hostPort string
 }
 

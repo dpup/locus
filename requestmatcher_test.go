@@ -1,8 +1,6 @@
 package locus
 
 import (
-	"net/http"
-	"net/url"
 	"testing"
 )
 
@@ -35,6 +33,10 @@ func TestUrlMatcher(t *testing.T) {
 		{"http://test.com:5000", "http://test.com/foo", false},
 		{"http://test.com:5000", "http://test.com:5000/foo", true},
 
+		{"/foo", "http://test.com/foo", true},
+		{"/foo", "http://google.com/foo/bar", true},
+		{"/foo", "http://google.com/baz/foo/bar", false},
+
 		// Normalize port 80 to make it optional.
 		{"http://test.com", "http://test.com:80/foo", true},
 		{"http://test.com:80", "http://test.com/foo", true},
@@ -56,20 +58,4 @@ func TestUrlMatcher(t *testing.T) {
 			t.Errorf("matching '%s' against '%s' => %v, want %v (%s)", tt.requrl, tt.matchurl, actual, tt.expected, reason)
 		}
 	}
-}
-
-func mustParseURL(rawurl string) url.URL {
-	u, err := url.Parse(rawurl)
-	if err != nil {
-		panic(err)
-	}
-	return *u
-}
-
-func mustReq(rawurl string) http.Request {
-	r, err := http.NewRequest("GET", rawurl, nil)
-	if err != nil {
-		panic(err)
-	}
-	return *r
 }
