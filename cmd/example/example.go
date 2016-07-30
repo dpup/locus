@@ -13,7 +13,7 @@ func main() {
 	// open http://localhost:5555/news/world-middle-east-36932694
 	bbc := proxy.NewConfig()
 	bbc.Match("/news")
-	bbc.Upstream("http://www.bbc.com/news")
+	bbc.Upstream(locus.SingleUpstream("http://www.bbc.com/news"))
 	bbc.StripHeader("Cookie")
 	bbc.SetHeader("Host", "www.bbc.com")
 	bbc.SetHeader("Referer", "http://www.bbc.com/news")
@@ -21,7 +21,7 @@ func main() {
 	// open localhost:5555/wiki/England
 	wiki := proxy.NewConfig()
 	wiki.Match("/wiki")
-	wiki.Upstream("https://en.wikipedia.org")
+	wiki.Upstream(locus.SingleUpstream("https://en.wikipedia.org"))
 	wiki.StripHeader("Cookie")
 	wiki.SetHeader("Host", "en.wikipedia.org")
 	wiki.SetHeader("Referer", "https://en.wikipedia.org/wiki/Main_Page")

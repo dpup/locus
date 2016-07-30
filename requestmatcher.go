@@ -8,20 +8,20 @@ import (
 
 // RequestMatcher is...
 type RequestMatcher interface {
-	Matches(req http.Request) bool
+	Matches(req *http.Request) bool
 }
 
 // RequestMatcherFn is an adaptor to allow a function to expose the
 // RequestMatcher interface.
-type RequestMatcherFn func(req http.Request) bool
+type RequestMatcherFn func(req *http.Request) bool
 
 // Matches calls the function and returns the result.
-func (fn RequestMatcherFn) Matches(req http.Request) bool {
+func (fn RequestMatcherFn) Matches(req *http.Request) bool {
 	return fn(req)
 }
 
 // MatchAll implements RequestMatcher interface and matches all requests.
-var MatchAll = RequestMatcherFn(func(req http.Request) bool {
+var MatchAll = RequestMatcherFn(func(req *http.Request) bool {
 	return true
 })
 
@@ -30,12 +30,12 @@ type urlMatcher struct {
 	hostPort string
 }
 
-func (um *urlMatcher) Matches(req http.Request) bool {
+func (um *urlMatcher) Matches(req *http.Request) bool {
 	ok, _ := um.MatchWithReason(req)
 	return ok
 }
 
-func (um *urlMatcher) MatchWithReason(req http.Request) (bool, string) {
+func (um *urlMatcher) MatchWithReason(req *http.Request) (bool, string) {
 	if um.url.Scheme != "" && um.url.Scheme != req.URL.Scheme {
 		return false, "scheme mismatch"
 	}
@@ -50,7 +50,7 @@ func (um *urlMatcher) MatchWithReason(req http.Request) (bool, string) {
 	// TODO: Add query param matching, e.g. foo.com?staging=true.
 }
 
-func (um *urlMatcher) matchHost(req http.Request) bool {
+func (um *urlMatcher) matchHost(req *http.Request) bool {
 	// TODO: Add wildcard domain matching.
 
 	if um.hostPort == "" {

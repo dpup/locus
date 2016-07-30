@@ -1,7 +1,6 @@
 package locus
 
 import (
-	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
@@ -12,17 +11,18 @@ import (
 
 // Config is...
 type Config struct {
-	// RequestMatcher is used to determine whether a config matches an incoming
-	// request and should be used to configure the proxied request.
-	RequestMatcher RequestMatcher
-
-	// UpstreamProvider is used to fetch a list of candidate upstreams to proxy
-	// the request to.
-	UpstreamProvider UpstreamProvider
-
 	// PathPrefix will be stripped from the incoming request path, iff the
-	// upstream specifies a path in its URL.
+	// upstream specifies a path in its URL. When using Config.Match it is set to
+	// the path provided in the URL string.
 	PathPrefix string
+
+	// requestMatcher is used to determine whether a config matches an incoming
+	// request and should be used to configure the proxied request.
+	requestMatcher RequestMatcher
+
+	// upstreamProvider is used to fetch a list of candidate upstreams to proxy
+	// the request to.
+	upstreamProvider UpstreamProvider
 
 	stripHeaders []string
 	setHeaders   map[string]string
@@ -73,9 +73,11 @@ type Config struct {
 //     request   = http://abc.com/def/ghi
 //     proxied   = http://upstream.com/xyz/ghi
 //
-func (c *Config) Transform(req *http.Request) {
-	upstreams := c.UpstreamProvider.Upstreams()
-	upstream := upstreams[rand.Intn(len(upstreams))]
+func (c *Config) Transform(req *http.Request) error {
+	upstream, err := c.upstreamProvider.Get()
+	if err != nil {
+		return err
+	}
 
 	// Update destination.
 	req.URL.Scheme = upstream.Scheme
@@ -106,6 +108,13 @@ func (c *Config) Transform(req *http.Request) {
 		}
 		req.Header[k] = append(req.Header[k], v...)
 	}
+
+	return nil
+}
+
+// Matches returns true if this config can be used for the provided request.
+func (c *Config) Matches(req *http.Request) bool {
+	return c.requestMatcher.Matches(req)
 }
 
 // Match configures the config to match a URL. Scheme, Host, Port should be
@@ -115,32 +124,14 @@ func (c *Config) Match(urlStr string) error {
 	if err != nil {
 		return err
 	}
-	c.RequestMatcher = &urlMatcher{url: u}
+	c.requestMatcher = &urlMatcher{url: u}
 	c.PathPrefix = u.Path
 	return nil
 }
 
-// Upstream configures the revproxy to use a fixed destination.
-func (c *Config) Upstream(u string) error {
-	upstreams := []string{u}
-	return c.Upstreams(upstreams)
-}
-
-// Upstreams configures the revproxy to select from a fixed set of destinations.
-func (c *Config) Upstreams(urlStrings []string) error {
-	upstreams := make([]*url.URL, len(urlStrings))
-	for i, urlStr := range urlStrings {
-		u, err := url.Parse(urlStr)
-		if err != nil {
-			return err
-		}
-		upstreams[i] = u
-	}
-	fn := UpstreamProviderFn(func() []*url.URL {
-		return upstreams
-	})
-	c.UpstreamProvider = &fn
-	return nil
+// Upstream configures how to fetch the upstream for a request.
+func (c *Config) Upstream(u UpstreamProvider) {
+	c.upstreamProvider = u
 }
 
 // AddHeader specifies a header to add to the proxied request.

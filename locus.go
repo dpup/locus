@@ -37,7 +37,7 @@ func (rp *RevProxy) AddConfig(cfg *Config) {
 	rp.configs = append(rp.configs, cfg)
 }
 
-// Serve starts a server on
+// Serve starts a server.
 func (rp *RevProxy) Serve(port uint16, readTimeout, writeTimeout time.Duration) error {
 	s := http.Server{
 		Addr:           fmt.Sprintf(":%d", port),
@@ -56,8 +56,12 @@ func (rp *RevProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 func (rp *RevProxy) director(req *http.Request) {
 	for i, c := range rp.configs {
-		if c.RequestMatcher.Matches(*req) {
-			c.Transform(req)
+		if c.Matches(req) {
+			err := c.Transform(req)
+			if err != nil {
+				// TODO: Render local error page.
+				log.Printf("Error transforming request:", err)
+			}
 			if rp.VerboseLogging {
 				d, _ := httputil.DumpRequestOut(req, false)
 				log.Printf("Config(%d) %s", i, string(d))

@@ -7,12 +7,12 @@ import (
 
 func TestTransformWithPathForwarding(t *testing.T) {
 	cfg := Config{}
-	cfg.Upstream("https://google.com:4000")
+	cfg.Upstream(SingleUpstream("https://google.com:4000"))
 	cfg.Match("http://my.mirror.com/search/")
 
 	req := mustReq("http://my.mirror.com/search/Byzantine–Bulgarian_wars")
 
-	cfg.Transform(&req)
+	cfg.Transform(req)
 
 	if req.URL.Scheme != "https" {
 		t.Errorf("Expected scheme to be 'https', was %s", req.URL.Scheme)
@@ -29,12 +29,12 @@ func TestTransformWithPathForwarding(t *testing.T) {
 
 func TestTransformWithPath(t *testing.T) {
 	cfg := Config{}
-	cfg.Upstream("https://en.wikipedia.org/wiki/")
+	cfg.Upstream(SingleUpstream("https://en.wikipedia.org/wiki/"))
 	cfg.Match("http://my.mirror.com/stuff/")
 
 	req := mustReq("http://my.mirror.com/stuff/Byzantine–Bulgarian_wars")
 
-	cfg.Transform(&req)
+	cfg.Transform(req)
 
 	actual := req.URL.String()
 	expected := "https://en.wikipedia.org/wiki/Byzantine%E2%80%93Bulgarian_wars"
@@ -45,11 +45,11 @@ func TestTransformWithPath(t *testing.T) {
 
 func TestTransformWithPathNoTrailingSlash(t *testing.T) {
 	cfg := Config{}
-	cfg.Upstream("http://www.bbc.com/news")
+	cfg.Upstream(SingleUpstream("http://www.bbc.com/news"))
 	cfg.Match("/")
 
 	req := mustReq("http://localhost:1234/")
-	cfg.Transform(&req)
+	cfg.Transform(req)
 
 	actual := req.URL.String()
 	expected := "http://www.bbc.com/news"
@@ -60,7 +60,7 @@ func TestTransformWithPathNoTrailingSlash(t *testing.T) {
 
 func TestTransformWithHeaders(t *testing.T) {
 	cfg := Config{}
-	cfg.Upstream("https://en.wikipedia.org/wiki/")
+	cfg.Upstream(SingleUpstream("https://en.wikipedia.org/wiki/"))
 	cfg.Match("http://my.mirror.com/stuff/")
 	cfg.StripHeader("Cookie")
 	cfg.SetHeader("Referer", "https://en.wikipedia.org/wiki/Main_Page")
@@ -69,7 +69,7 @@ func TestTransformWithHeaders(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: "foo", Value: "bar"})
 	req.Header.Set("Referer", "http://mysite.com")
 
-	cfg.Transform(&req)
+	cfg.Transform(req)
 
 	if c, ok := req.Header["Cookie"]; ok {
 		t.Errorf("Expected Cookie to be stripped, was %s", c)

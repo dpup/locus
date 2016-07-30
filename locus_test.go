@@ -13,10 +13,10 @@ func mustParseURL(rawurl string) *url.URL {
 	return u
 }
 
-func mustReq(rawurl string) http.Request {
+func mustReq(rawurl string) *http.Request {
 	r, err := http.NewRequest("GET", rawurl, nil)
 	if err != nil {
 		panic(err)
 	}
-	return *r
+	return r
 }
