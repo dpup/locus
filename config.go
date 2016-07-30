@@ -38,6 +38,10 @@ type Config struct {
 // Transform applies a config to an HTTP request, satisifies the same signature
 // as httputil.ReverseProxy.Director.
 //
+// By default, the Host header is not set to the upstream's host, as it is
+// common for upstreams to be IPs and to want the Host from the original
+// request. Use SetHeader("Host", "foo.com") if you desire alternate behavior.
+//
 // The UpstreamProvider is used to get a list of candidate upstreams, for now a
 // random one is chosen. The upstream is then used to set scheme and host on the
 // URL.
@@ -79,7 +83,11 @@ func (c *Config) Transform(req *http.Request) {
 
 	if upstream.Path != "" {
 		pathSuffix := strings.TrimPrefix(req.URL.Path, c.PathPrefix)
-		req.URL.Path = singleJoiningSlash(upstream.Path, pathSuffix)
+		if pathSuffix == "" {
+			req.URL.Path = upstream.Path
+		} else {
+			req.URL.Path = singleJoiningSlash(upstream.Path, pathSuffix)
+		}
 	}
 
 	// Strip, set and add headers.
@@ -88,6 +96,9 @@ func (c *Config) Transform(req *http.Request) {
 	}
 	for k, v := range c.setHeaders {
 		req.Header[k] = []string{v}
+		if k == "Host" {
+			req.Host = v
+		}
 	}
 	for k, v := range c.addHeaders {
 		if _, ok := req.Header[k]; !ok {

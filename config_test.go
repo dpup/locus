@@ -27,7 +27,7 @@ func TestTransformWithPathForwarding(t *testing.T) {
 	}
 }
 
-func TestTransformWithPathModification(t *testing.T) {
+func TestTransformWithPath(t *testing.T) {
 	cfg := Config{}
 	cfg.Upstream("https://en.wikipedia.org/wiki/")
 	cfg.Match("http://my.mirror.com/stuff/")
@@ -36,16 +36,25 @@ func TestTransformWithPathModification(t *testing.T) {
 
 	cfg.Transform(&req)
 
-	if req.URL.Scheme != "https" {
-		t.Errorf("Expected scheme to be 'https', was %s", req.URL.Scheme)
+	actual := req.URL.String()
+	expected := "https://en.wikipedia.org/wiki/Byzantine%E2%80%93Bulgarian_wars"
+	if actual != expected {
+		t.Errorf("Expected URL to be '%s', was %s", expected, actual)
 	}
+}
 
-	if req.URL.Host != "en.wikipedia.org" {
-		t.Errorf("Expected host to be 'en.wikipedia.org', was %s", req.URL.Host)
-	}
+func TestTransformWithPathNoTrailingSlash(t *testing.T) {
+	cfg := Config{}
+	cfg.Upstream("http://www.bbc.com/news")
+	cfg.Match("/")
 
-	if req.URL.Path != "/wiki/Byzantine–Bulgarian_wars" {
-		t.Errorf("Expected path to be '/wiki/Byzantine–Bulgarian_wars', was %s", req.URL.Path)
+	req := mustReq("http://localhost:1234/")
+	cfg.Transform(&req)
+
+	actual := req.URL.String()
+	expected := "http://www.bbc.com/news"
+	if actual != expected {
+		t.Errorf("Expected URL to be '%s', was %s", expected, actual)
 	}
 }
 
