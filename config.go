@@ -35,11 +35,6 @@ type Config struct {
 	// TODO: Allow response transformations.
 }
 
-// NewConfig returns an empty config instance.
-func NewConfig() *Config {
-	return *Config{}
-}
-
 // Transform applies a config to an HTTP request, satisifies the same signature
 // as httputil.ReverseProxy.Director.
 //
