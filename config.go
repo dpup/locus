@@ -74,7 +74,7 @@ type Config struct {
 //     proxied   = http://upstream.com/xyz/ghi
 //
 func (c *Config) Transform(req *http.Request) error {
-	upstream, err := c.upstreamProvider.Get()
+	upstream, err := c.upstreamProvider.Get(req)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,7 @@ import (
 
 func TestTransformWithPathForwarding(t *testing.T) {
 	cfg := Config{}
-	cfg.Upstream(SingleUpstream("https://google.com:4000"))
+	cfg.Upstream(Single("https://google.com:4000"))
 	cfg.Match("http://my.mirror.com/search/")
 
 	req := mustReq("http://my.mirror.com/search/Byzantine–Bulgarian_wars")
@@ -29,7 +29,7 @@ func TestTransformWithPathForwarding(t *testing.T) {
 
 func TestTransformWithPath(t *testing.T) {
 	cfg := Config{}
-	cfg.Upstream(SingleUpstream("https://en.wikipedia.org/wiki/"))
+	cfg.Upstream(Single("https://en.wikipedia.org/wiki/"))
 	cfg.Match("http://my.mirror.com/stuff/")
 
 	req := mustReq("http://my.mirror.com/stuff/Byzantine–Bulgarian_wars")
@@ -45,7 +45,7 @@ func TestTransformWithPath(t *testing.T) {
 
 func TestTransformWithPathNoTrailingSlash(t *testing.T) {
 	cfg := Config{}
-	cfg.Upstream(SingleUpstream("http://www.bbc.com/news"))
+	cfg.Upstream(Single("http://www.bbc.com/news"))
 	cfg.Match("/")
 
 	req := mustReq("http://localhost:1234/")
@@ -60,7 +60,7 @@ func TestTransformWithPathNoTrailingSlash(t *testing.T) {
 
 func TestTransformWithHeaders(t *testing.T) {
 	cfg := Config{}
-	cfg.Upstream(SingleUpstream("https://en.wikipedia.org/wiki/"))
+	cfg.Upstream(Single("https://en.wikipedia.org/wiki/"))
 	cfg.Match("http://my.mirror.com/stuff/")
 	cfg.StripHeader("Cookie")
 	cfg.SetHeader("Referer", "https://en.wikipedia.org/wiki/Main_Page")
