@@ -1,6 +1,5 @@
 
 Needed to replace NGINX for my personal sites:
-- Add wildcard domain matching.
 - Upstream retry settings.
 - Upstream failover settings.
 - Gracefully handle downstream errors

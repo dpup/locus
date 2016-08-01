@@ -30,6 +30,7 @@ type urlMatcher struct {
 	url          *url.URL
 	preprocessed bool
 	host         string
+	wild         bool
 	port         string
 	query        url.Values
 }
@@ -60,6 +61,10 @@ func (um *urlMatcher) MatchWithReason(req *http.Request) (bool, string) {
 func (um *urlMatcher) preprocess() {
 	if !um.preprocessed {
 		um.host, um.port = splitHost(um.url)
+		if um.host != "" && um.host[:1] == "*" {
+			um.wild = true
+			um.host = um.host[1:]
+		}
 		um.query = um.url.Query()
 		um.preprocessed = true
 	}
@@ -67,7 +72,8 @@ func (um *urlMatcher) preprocess() {
 
 func (um *urlMatcher) matchHost(req *http.Request) bool {
 	host, port := splitHost(req.URL)
-	return (um.host == "" || um.host == host) && (um.port == "" || um.port == port)
+	return (um.host == "" || um.host == host || (um.wild && strings.HasSuffix(host, um.host))) &&
+		(um.port == "" || um.port == port)
 }
 
 func (um *urlMatcher) matchQuery(req *http.Request) bool {

@@ -22,6 +22,13 @@ func TestUrlMatcher(t *testing.T) {
 		{"//test.com", "https://www.test.com", false},
 		{"//test.com", "www.test.com", false},
 
+		// Wildcard host binding.
+		{"http://*.test.com", "http://test.com", false},
+		{"http://*.test.com", "http://www.test.com", true},
+		{"http://*.test.com", "http://about.test.com", true},
+		{"http://*.test.com", "http://one.two.three.test.com", true},
+		{"http://www.*.test.com", "http://www.three.test.com", false},
+
 		// Host and scheme binding (implies port).
 		{"http://test.com", "http://test.com/foo", true},
 		{"http://test.com", "https://test.com/foo", false},
