@@ -64,7 +64,7 @@ func (rp *RevProxy) director(req *http.Request) {
 			}
 			if rp.VerboseLogging {
 				d, _ := httputil.DumpRequestOut(req, false)
-				log.Printf("Config(%d) %s", i, string(d))
+				log.Printf("Config(%d) %s://%s %s", i, req.URL.Scheme, req.URL.Host, string(d))
 			} else {
 				log.Printf("Config(%d) %s %s://%s%s", i, req.Method, req.URL.Scheme, req.URL.Host, req.URL.Path)
 			}

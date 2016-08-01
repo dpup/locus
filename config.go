@@ -30,7 +30,6 @@ type Config struct {
 
 	// TODO: Upstream retry settings.
 	// TODO: Upstream failover settings.
-	// TODO: Upstream selection settings.
 	//
 	// TODO: Allow response transformations.
 }
@@ -129,7 +128,12 @@ func (c *Config) Match(urlStr string) error {
 	return nil
 }
 
-// Upstream configures how to fetch the upstream for a request.
+// Upstream specifies an UpstreamProvider to use when finding the destination
+// server.
+//
+// `Single("http://dest.com")` can be used to route requests to a single
+// upstream server. `Random(urls)` or `RoundRobin(urls)` can be used to choose
+// from a fixed set of servers. Other implementations exist.
 func (c *Config) Upstream(u UpstreamProvider) {
 	c.upstreamProvider = u
 }
