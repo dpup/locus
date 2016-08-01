@@ -6,7 +6,8 @@ import (
 	"strings"
 )
 
-// RequestMatcher is...
+// The RequestMatcher interface is used to determine if a config matches an
+// incoming request.
 type RequestMatcher interface {
 	Matches(req *http.Request) bool
 }
@@ -26,8 +27,10 @@ var MatchAll = RequestMatcherFn(func(req *http.Request) bool {
 })
 
 type urlMatcher struct {
-	url      *url.URL
-	hostPort string
+	url          *url.URL
+	preprocessed bool
+	host         string
+	port         string
 }
 
 func (um *urlMatcher) Matches(req *http.Request) bool {
@@ -49,25 +52,23 @@ func (um *urlMatcher) MatchWithReason(req *http.Request) (bool, string) {
 }
 
 func (um *urlMatcher) matchHost(req *http.Request) bool {
-	if um.hostPort == "" {
-		um.hostPort = um.url.Host
-		if !strings.Contains(um.hostPort, ":") {
-			if um.url.Scheme == "http" {
-				um.hostPort += ":80"
-			} else if um.url.Scheme == "https" {
-				um.hostPort += ":443"
-			}
-		}
+	if !um.preprocessed {
+		um.host, um.port = splitHost(um.url)
+		um.preprocessed = true
 	}
+	host, port := splitHost(req.URL)
+	return (um.host == "" || um.host == host) && (um.port == "" || um.port == port)
+}
 
-	if req.URL.Host == um.url.Host || req.URL.Host == um.hostPort {
-		return true
+func splitHost(url *url.URL) (host, port string) {
+	parts := strings.Split(url.Host, ":")
+	host = parts[0]
+	if len(parts) == 2 {
+		port = parts[1]
+	} else if url.Scheme == "https" {
+		port = "443"
+	} else if url.Scheme == "http" {
+		port = "80"
 	}
-	if req.URL.Scheme == "http" && req.URL.Host+":80" == um.hostPort {
-		return true
-	}
-	if req.URL.Scheme == "https" && req.URL.Host+":443" == um.hostPort {
-		return true
-	}
-	return false
+	return
 }

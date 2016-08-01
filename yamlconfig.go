@@ -103,7 +103,7 @@ func loadConfigsFromYAML(data []byte) ([]*Config, error) {
 func siteFromYAML(site yamlSiteConfig, cfg *Config) error {
 	cfg.Name = site.Name
 
-	err := cfg.Match(site.Match)
+	err := cfg.Bind(site.Match)
 	if err != nil {
 		return err
 	}

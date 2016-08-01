@@ -12,7 +12,7 @@ func main() {
 
 	// open http://localhost:5555/news/world-middle-east-36932694
 	bbc := proxy.NewConfig()
-	bbc.Match("/news")
+	bbc.Bind("/news")
 	bbc.Upstream(locus.Single("http://www.bbc.com/news"))
 	bbc.StripHeader("Cookie") // Avoid fowarding localhost cookies.
 	bbc.SetHeader("Host", "www.bbc.com")
@@ -20,7 +20,7 @@ func main() {
 
 	// open localhost:5555/wiki/England
 	wiki := proxy.NewConfig()
-	wiki.Match("/wiki")
+	wiki.Bind("/wiki")
 	wiki.Upstream(locus.Single("https://en.wikipedia.org"))
 	wiki.StripHeader("Cookie")
 	wiki.SetHeader("Host", "en.wikipedia.org")
@@ -28,7 +28,7 @@ func main() {
 
 	// open localhost:5555/amazon/dogs
 	amazon := proxy.NewConfig()
-	amazon.Match("/amazon")
+	amazon.Bind("/amazon")
 	amazon.Upstream(locus.DNS("amazon.com", 80, "/404")) // Force a 404 to avoid canonical redirects in demo.
 	amazon.StripHeader("Cookie")
 	amazon.SetHeader("Host", "www.amazon.com")
