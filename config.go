@@ -6,9 +6,6 @@ import (
 	"strings"
 )
 
-// TODO: hook up httputil.ReverseProxy with custom Director.
-// https://golang.org/src/net/http/httputil/reverseproxy.go?s=3769:3844#L130
-
 // Config is...
 type Config struct {
 	// User defined name for the config.
@@ -30,11 +27,6 @@ type Config struct {
 	stripHeaders []string
 	setHeaders   map[string]string
 	addHeaders   map[string][]string
-
-	// TODO: Upstream retry settings.
-	// TODO: Upstream failover settings.
-	//
-	// TODO: Allow response transformations.
 }
 
 // Transform applies a config to an HTTP request, satisifies the same signature

@@ -46,13 +46,9 @@ func (um *urlMatcher) MatchWithReason(req *http.Request) (bool, string) {
 		return false, "path prefix mismatch"
 	}
 	return true, "match"
-
-	// TODO: Add query param matching, e.g. foo.com?staging=true.
 }
 
 func (um *urlMatcher) matchHost(req *http.Request) bool {
-	// TODO: Add wildcard domain matching.
-
 	if um.hostPort == "" {
 		um.hostPort = um.url.Host
 		if !strings.Contains(um.hostPort, ":") {

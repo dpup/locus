@@ -1,0 +1,20 @@
+- Terminology change, use Bind instead of Match.
+- Globals in config -> Defaults
+- Globals sets timeouts, port, etc.
+
+- Consider using DNS for all types of upstreams, instead of decoupling.
+
+- Plug-in customizable Transport
+
+- Upstream retry settings.
+- Upstream failover settings.
+- Handle downstream errors
+
+- Allow response transformations.
+- Add wildcard domain matching.
+- Add query param matching, e.g. foo.com?staging=true.
+
+- Separate out access.log and error.log
+
+- Add leastconn upsteam selection option
+- Healthcheck on single upstream
