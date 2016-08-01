@@ -59,6 +59,18 @@ func TestUrlMatcher(t *testing.T) {
 		{"https://test.com:443", "http://test.com:443/foo", false},
 		{"https://test.com:443", "https://test.com:5000/foo", false},
 
+		// Query param binding.
+		{"?staging=true", "http://test.com/?staging=true", true},
+		{"?staging=true", "http://test.com/?staging=true&debug=true", true},
+		{"?staging=true", "http://test.com/?staging=false", false},
+		{"?staging=true", "http://test.com/?staging=false&staging=true", false},
+		{"?staging=true", "http://test.com/?staging=1", false},
+		{"?staging=true", "http://test.com/", false},
+		{"?lang=en&country=us", "http://test.com/?lang=en&country=us", true},
+		{"?lang=en&country=us", "http://test.com/?country=us&lang=en", true},
+		{"?lang=en&country=us", "http://test.com/?lang=en", false},
+		{"?lang=en&country=us", "http://test.com/?country=us", false},
+
 		// URLs without '//' are hostless, test.com is actually the path.
 		{"//test.com", "test.com", false},
 	}

@@ -11,7 +11,6 @@
 
 - Allow response transformations.
 - Add wildcard domain matching.
-- Add query param matching, e.g. foo.com?staging=true.
 
 - Separate out access.log and error.log
 

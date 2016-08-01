@@ -31,6 +31,7 @@ type urlMatcher struct {
 	preprocessed bool
 	host         string
 	port         string
+	query        url.Values
 }
 
 func (um *urlMatcher) Matches(req *http.Request) bool {
@@ -39,6 +40,8 @@ func (um *urlMatcher) Matches(req *http.Request) bool {
 }
 
 func (um *urlMatcher) MatchWithReason(req *http.Request) (bool, string) {
+	um.preprocess()
+
 	if um.url.Scheme != "" && um.url.Scheme != req.URL.Scheme {
 		return false, "scheme mismatch"
 	}
@@ -48,16 +51,33 @@ func (um *urlMatcher) MatchWithReason(req *http.Request) (bool, string) {
 	if um.url.Path != "" && !strings.HasPrefix(req.URL.Path, um.url.Path) {
 		return false, "path prefix mismatch"
 	}
+	if um.url.RawQuery != "" && !um.matchQuery(req) {
+		return false, "query mismatch"
+	}
 	return true, "match"
 }
 
-func (um *urlMatcher) matchHost(req *http.Request) bool {
+func (um *urlMatcher) preprocess() {
 	if !um.preprocessed {
 		um.host, um.port = splitHost(um.url)
+		um.query = um.url.Query()
 		um.preprocessed = true
 	}
+}
+
+func (um *urlMatcher) matchHost(req *http.Request) bool {
 	host, port := splitHost(req.URL)
 	return (um.host == "" || um.host == host) && (um.port == "" || um.port == port)
+}
+
+func (um *urlMatcher) matchQuery(req *http.Request) bool {
+	query := req.URL.Query()
+	for k, v := range um.query {
+		if query.Get(k) != v[0] {
+			return false
+		}
+	}
+	return true
 }
 
 func splitHost(url *url.URL) (host, port string) {

@@ -113,9 +113,10 @@ func (c *Config) Matches(req *http.Request) bool {
 
 // Bind configures this config to target the provided URL.
 //
-// Scheme, Host, Port will be exact matches, if present, Path is prefix matched.
-// Ports 80 and 443 are implied if a scheme is present without explicit port. A
-// URL with a host and no scheme or port will match all ports.
+// If present, Scheme, Host, Port will be exact matches, Path is prefix matched.
+// Query params are exact match, but not exclusive. Ports 80 and 443 are implied
+// if a scheme is present without explicit port. A URL with a host and no scheme
+// or port will match all ports.
 //
 // See requestmatcher_test.go for examples.
 func (c *Config) Bind(urlStr string) error {
