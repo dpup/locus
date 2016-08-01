@@ -2,6 +2,7 @@ package locus
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -25,7 +26,7 @@ func New() *RevProxy {
 
 // NewConfig creates an empty config, registers it, then returns it.
 func (rp *RevProxy) NewConfig() *Config {
-	cfg := &Config{}
+	cfg := &Config{Name: fmt.Sprintf("cfg%d", len(rp.configs))}
 	rp.AddConfig(cfg)
 	return cfg
 }
@@ -35,6 +36,27 @@ func (rp *RevProxy) NewConfig() *Config {
 // request.
 func (rp *RevProxy) AddConfig(cfg *Config) {
 	rp.configs = append(rp.configs, cfg)
+}
+
+// LoadConfigs adds site configs stored as YAML. See SampleYAMLConfig.
+func (rp *RevProxy) LoadConfigs(data []byte) error {
+	cfgs, err := loadConfigsFromYAML(data)
+	if err != nil {
+		return err
+	}
+	for _, cfg := range cfgs {
+		rp.AddConfig(cfg)
+	}
+	return nil
+}
+
+// LoadConfigFile reads configs from a YAML file.
+func (rp *RevProxy) LoadConfigFile(filename string) error {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	return rp.LoadConfigs(data)
 }
 
 // Serve starts a server.
@@ -55,18 +77,18 @@ func (rp *RevProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (rp *RevProxy) director(req *http.Request) {
-	for i, c := range rp.configs {
+	for _, c := range rp.configs {
 		if c.Matches(req) {
 			err := c.Transform(req)
 			if err != nil {
 				// TODO: Render local error page.
-				log.Printf("Error transforming request:", err)
+				log.Printf("Error transforming request: %s", err)
 			}
 			if rp.VerboseLogging {
 				d, _ := httputil.DumpRequestOut(req, false)
-				log.Printf("Config(%d) %s://%s %s", i, req.URL.Scheme, req.URL.Host, string(d))
+				log.Printf("config[%s] %s://%s %s", c.Name, req.URL.Scheme, req.URL.Host, string(d))
 			} else {
-				log.Printf("Config(%d) %s %s://%s%s", i, req.Method, req.URL.Scheme, req.URL.Host, req.URL.Path)
+				log.Printf("config[%s] %s %s://%s%s", c.Name, req.Method, req.URL.Scheme, req.URL.Host, req.URL.Path)
 			}
 			return
 		}

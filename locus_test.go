@@ -3,6 +3,7 @@ package locus
 import (
 	"net/http"
 	"net/url"
+	"testing"
 )
 
 func mustParseURL(rawurl string) *url.URL {
@@ -19,4 +20,10 @@ func mustReq(rawurl string) *http.Request {
 		panic(err)
 	}
 	return r
+}
+
+func checkError(t *testing.T, err error, str string) {
+	if err != nil {
+		t.Errorf("unexpected error: %s: %s", str, err)
+	}
 }

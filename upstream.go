@@ -18,7 +18,7 @@ type UpstreamProvider interface {
 	Get(req *http.Request) (*url.URL, error)
 
 	// All returns all the known upstream URLs.
-	All(req *http.Request) ([]*url.URL, error)
+	All() ([]*url.URL, error)
 }
 
 // Single returns a provider that only has one upstream.
@@ -71,7 +71,7 @@ func (ru *fixedSet) Get(req *http.Request) (*url.URL, error) {
 }
 
 // All returns all upsteams.
-func (ru *fixedSet) All(req *http.Request) ([]*url.URL, error) {
+func (ru *fixedSet) All() ([]*url.URL, error) {
 	if ru.urls == nil && ru.err == nil {
 		ru.parseURLs()
 	}
@@ -89,7 +89,7 @@ func (ru *fixedSet) parseURLs() {
 	for i, urlStr := range ru.urlStrs {
 		u, err := url.Parse(string(urlStr))
 		if err != nil {
-			ru.err = err
+			ru.err = fmt.Errorf("unable to parse '%s': %s", urlStr, err)
 			return
 		}
 		urls[i] = u
@@ -108,6 +108,10 @@ func DNS(dnsHost string, port uint16, pathPrefix string) UpstreamProvider {
 
 // DefaultDNSTTL is 1 minute.
 const DefaultDNSTTL = time.Minute
+
+// FakeDNSHost is hardcoded not to hit the actual DNS resolver, instead
+// returning a set of local IPs.
+const FakeDNSHost = "dns.test.fake"
 
 // DNSSet exposes the UpstreamProvider interface, fetching upstream hosts from
 // DNS.
@@ -146,7 +150,7 @@ func (ds *DNSSet) Get(req *http.Request) (*url.URL, error) {
 }
 
 // All returns all upsteams.
-func (ds *DNSSet) All(req *http.Request) ([]*url.URL, error) {
+func (ds *DNSSet) All() ([]*url.URL, error) {
 	ds.maybeRefresh()
 	return ds.addrs, ds.err
 }
@@ -167,15 +171,21 @@ func (ds *DNSSet) maybeRefresh() {
 		return
 	}
 
-	addrs, err := net.LookupHost(ds.DNSHost)
-	if err != nil {
-		if ds.AllowStale && len(ds.addrs) != 0 {
-			log.Printf("error looking up %s, using stale upstreams", ds.DNSHost)
-		} else {
-			ds.addrs = nil
-			ds.err = err
+	var addrs []string
+	if ds.DNSHost == FakeDNSHost {
+		addrs = []string{"192.168.0.0", "192.168.0.1", "192.168.0.2", "192.168.0.3"}
+	} else {
+		var err error
+		addrs, err = net.LookupHost(ds.DNSHost)
+		if err != nil {
+			if ds.AllowStale && len(ds.addrs) != 0 {
+				log.Printf("error looking up %s, using stale upstreams", ds.DNSHost)
+			} else {
+				ds.addrs = nil
+				ds.err = err
+			}
+			return
 		}
-		return
 	}
 
 	log.Printf("dns refreshed for %s, %d upstream(s) found", ds.DNSHost, len(addrs))

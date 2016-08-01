@@ -11,6 +11,9 @@ import (
 
 // Config is...
 type Config struct {
+	// User defined name for the config.
+	Name string
+
 	// PathPrefix will be stripped from the incoming request path, iff the
 	// upstream specifies a path in its URL. When using Config.Match it is set to
 	// the path provided in the URL string.
