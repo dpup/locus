@@ -13,8 +13,8 @@ import (
 // loaded from a file. It is also used in tests as a canonical example that
 // exercises all options.
 const SampleYAMLConfig = `
-# The 'global' section contains settings to be applied to all sites.
-global:
+# The 'defaults' section contains settings to be applied to all sites.
+defaults:
   add_header:
     X-Proxied-For: Locus
 # The 'sites' section allows multiple configurations
@@ -65,8 +65,8 @@ type yamlSiteConfig struct {
 }
 
 type yamlConfig struct {
-	Global yamlSiteConfig   `yaml:"global"`
-	Sites  []yamlSiteConfig `yaml:"sites"`
+	Defaults yamlSiteConfig   `yaml:"defaults"`
+	Sites    []yamlSiteConfig `yaml:"sites"`
 }
 
 func loadConfigsFromYAML(data []byte) ([]*Config, error) {
@@ -78,15 +78,15 @@ func loadConfigsFromYAML(data []byte) ([]*Config, error) {
 		return nil, fmt.Errorf("error loading YAML: %s", err)
 	}
 
-	globalCfg := &Config{}
-	err = siteFromYAML(yc.Global, globalCfg)
+	defaultCfg := &Config{}
+	err = siteFromYAML(yc.Defaults, defaultCfg)
 	if err != nil {
-		return nil, fmt.Errorf("error loading global cfg: %s", err)
+		return nil, fmt.Errorf("error loading default cfg: %s", err)
 	}
 
 	for _, site := range yc.Sites {
 		cfg := &Config{}
-		*cfg = *globalCfg
+		*cfg = *defaultCfg
 		err := siteFromYAML(site, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("error loading config: %s", err)

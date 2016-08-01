@@ -1,6 +1,5 @@
 
-- Globals in config -> Defaults
-- Globals sets timeouts, port, etc.
+- Allow configs to set timeouts, port, etc.
 
 - Consider using DNS for all types of upstreams, instead of decoupling.
 
