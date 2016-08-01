@@ -1,20 +1,20 @@
 
-- Allow configs to set timeouts, port, etc.
-
-- Consider using DNS for all types of upstreams, instead of decoupling.
-
-- Plug-in customizable Transport
-
+Needed to replace NGINX for my personal sites:
+- Add wildcard domain matching.
 - Upstream retry settings.
 - Upstream failover settings.
-- Handle downstream errors
-
-- Allow response transformations.
-- Add wildcard domain matching.
-
+- Gracefully handle downstream errors
 - Separate out access.log and error.log
 
+Needed to replace ELBs in-front of ECS services:
+- ECS upstream provider, ideas:
+    - Use SDK to query for matching containers (http://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_DescribeContainerInstances.html)
+
+Nice to haves:
+- Allow configs to set timeouts, port, etc.
+- Consider using DNS for all types of upstreams, instead of decoupling.
+- Plug-in customizable Transport
+- Allow response transformations.
 - Add leastconn upsteam selection option
 - Healthcheck on single upstream
-
 - Extend Bind / RequestMatcher, to allow binding based on headers and other features.
