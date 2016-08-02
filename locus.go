@@ -11,9 +11,20 @@ import (
 
 // RevProxy wraps golang's httputil.ReverseProxy to provide multi-host routing.
 type RevProxy struct {
+
+	// VerboseLogging specifies that additional request details should be logged.
 	VerboseLogging bool
-	configs        []*Config
-	proxy          *httputil.ReverseProxy
+
+	// AccessLog specifies an optional logger for request details. If nil,
+	// logging goes to os.Stderr via the log package's standard logger.
+	AccessLog *log.Logger
+
+	// ErrorLog specifies an optional logger for exceptional occurances. If nil,
+	// logging goes to os.Stderr via the log package's standard logger.
+	ErrorLog *log.Logger
+
+	configs []*Config
+	proxy   *httputil.ReverseProxy
 }
 
 // New returns an empty instance of a RevProxy.
@@ -68,7 +79,7 @@ func (rp *RevProxy) Serve(port uint16, readTimeout, writeTimeout time.Duration) 
 		WriteTimeout:   writeTimeout,
 		MaxHeaderBytes: 1 << 20,
 	}
-	log.Printf("Starting RevProxy on port %d", port)
+	rp.elogf("Starting RevProxy on port %d", port)
 	return s.ListenAndServe()
 }
 
@@ -80,17 +91,32 @@ func (rp *RevProxy) director(req *http.Request) {
 	for _, c := range rp.configs {
 		if c.Matches(req) {
 			err := c.Transform(req)
-			if err != nil {
-				// TODO: Render local error page.
-				log.Printf("Error transforming request: %s", err)
+			if err != nil { // TODO: Render local error page.
+				rp.elogf("Error transforming request: %s", err)
 			}
 			if rp.VerboseLogging {
 				d, _ := httputil.DumpRequestOut(req, false)
-				log.Printf("config[%s] %s://%s %s", c.Name, req.URL.Scheme, req.URL.Host, string(d))
+				rp.alogf("locus[%s] %s %s://%s %s", c.Name, req.RemoteAddr, req.URL.Scheme, req.URL.Host, string(d))
 			} else {
-				log.Printf("config[%s] %s %s://%s%s", c.Name, req.Method, req.URL.Scheme, req.URL.Host, req.URL.Path)
+				rp.alogf("locus[%s] %s %s %s://%s%s", c.Name, req.RemoteAddr, req.Method, req.URL.Scheme, req.URL.Host, req.URL.Path)
 			}
 			return
 		}
+	}
+}
+
+func (rp *RevProxy) alogf(format string, args ...interface{}) {
+	if rp.AccessLog != nil {
+		rp.AccessLog.Printf(format, args...)
+	} else {
+		log.Printf(format, args...)
+	}
+}
+
+func (rp *RevProxy) elogf(format string, args ...interface{}) {
+	if rp.ErrorLog != nil {
+		rp.ErrorLog.Printf(format, args...)
+	} else {
+		log.Printf(format, args...)
 	}
 }

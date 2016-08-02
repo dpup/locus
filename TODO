@@ -3,7 +3,7 @@ Needed to replace NGINX for my personal sites:
 - Upstream retry settings.
 - Upstream failover settings.
 - Gracefully handle downstream errors
-- Separate out access.log and error.log
+- Debug page showing configs and status of upstreams
 
 Needed to replace ELBs in-front of ECS services:
 - ECS upstream provider, use AWS SDK
