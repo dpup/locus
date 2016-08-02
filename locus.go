@@ -24,14 +24,14 @@ type RevProxy struct {
 	ErrorLog *log.Logger
 
 	configs []*Config
-	proxy   *httputil.ReverseProxy
+	proxy   *ReverseProxy
 }
 
 // New returns an empty instance of a RevProxy.
 func New() *RevProxy {
 	rp := &RevProxy{}
 	rp.configs = []*Config{}
-	rp.proxy = &httputil.ReverseProxy{Director: rp.director}
+	rp.proxy = &ReverseProxy{Director: rp.director}
 	return rp
 }
 
