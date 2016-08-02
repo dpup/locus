@@ -28,7 +28,7 @@ func init() {
 	hopHeaders = append(hopHeaders, fakeHopHeader)
 }
 
-// Forked copy of ReverseProxy requires transformed URL before handling.
+// Forked copy of reverseProxy requires transformed URL before handling.
 func transform(target *url.URL, req *http.Request) *http.Request {
 	targetQuery := target.RawQuery
 	req.URL.Scheme = target.Scheme
@@ -81,7 +81,7 @@ func TestReverseProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proxyHandler := &ReverseProxy{}
+	proxyHandler := &reverseProxy{}
 	frontend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err := proxyHandler.Proxy(w, transform(backendURL, r))
 		if err != nil {
@@ -152,7 +152,7 @@ func TestXForwardedFor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proxyHandler := &ReverseProxy{}
+	proxyHandler := &reverseProxy{}
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
 
@@ -197,7 +197,7 @@ func TestReverseProxyQuery(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		frontend := httptest.NewServer(&ReverseProxy{})
+		frontend := httptest.NewServer(&reverseProxy{})
 		req, _ := http.NewRequest("GET", frontend.URL+tt.reqSuffix, nil)
 		req.Close = true
 		res, err := http.DefaultClient.Do(transform(backendURL, req))
@@ -224,7 +224,7 @@ func TestReverseProxyFlushInterval(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proxyHandler := &ReverseProxy{}
+	proxyHandler := &reverseProxy{}
 	proxyHandler.FlushInterval = time.Microsecond
 
 	done := make(chan bool)
@@ -285,7 +285,7 @@ func TestReverseProxyCancelation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proxyHandler := &ReverseProxy{}
+	proxyHandler := &reverseProxy{}
 
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
@@ -324,7 +324,7 @@ func TestNilBody(t *testing.T) {
 
 	frontend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		backURL, _ := url.Parse(backend.URL)
-		rp := &ReverseProxy{}
+		rp := &reverseProxy{}
 		r := req(t, "GET / HTTP/1.0\r\n\r\n")
 		r.Body = nil // this accidentally worked in Go 1.4 and below, so keep it working
 		err := rp.Proxy(w, transform(backURL, r))
@@ -377,7 +377,7 @@ func TestReverseProxyGetPutBuffer(t *testing.T) {
 		defer mu.Unlock()
 		log = append(log, event)
 	}
-	rp := &ReverseProxy{}
+	rp := &reverseProxy{}
 	const size = 1234
 	rp.BufferPool = bufferPool{
 		get: func() []byte {
@@ -440,7 +440,7 @@ func TestReverseProxy_Post(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proxyHandler := &ReverseProxy{}
+	proxyHandler := &reverseProxy{}
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
 

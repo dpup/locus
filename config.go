@@ -29,8 +29,7 @@ type Config struct {
 	addHeaders   map[string][]string
 }
 
-// Transform applies a config to an HTTP request, satisifies the same signature
-// as httputil.ReverseProxy.Director.
+// Transform applies a config to an HTTP request.
 //
 // By default, the Host header is not set to the upstream's host, as it is
 // common for upstreams to be IPs and to want the Host from the original

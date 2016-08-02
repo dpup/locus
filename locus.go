@@ -9,7 +9,8 @@ import (
 	"time"
 )
 
-// Locus wraps golang's httputil.ReverseProxy to provide multi-host routing.
+// Locus wraps a fork of golang's httputil.ReverseProxy to provide multi-host
+// routing.
 type Locus struct {
 
 	// VerboseLogging specifies that additional request details should be logged.
@@ -24,14 +25,14 @@ type Locus struct {
 	ErrorLog *log.Logger
 
 	configs []*Config
-	proxy   *ReverseProxy
+	proxy   *reverseProxy
 }
 
 // New returns an empty instance of a Locus.
 func New() *Locus {
 	locus := &Locus{}
 	locus.configs = []*Config{}
-	locus.proxy = &ReverseProxy{}
+	locus.proxy = &reverseProxy{}
 	return locus
 }
 

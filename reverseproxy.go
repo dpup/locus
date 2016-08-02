@@ -21,10 +21,10 @@ import (
 // flushLoop() goroutine.
 var onExitFlushLoop func()
 
-// ReverseProxy is an HTTP Handler that takes an incoming request and
+// reverseProxy is an HTTP Handler that takes an incoming request and
 // sends it to another server, proxying the response back to the
 // client.
-type ReverseProxy struct {
+type reverseProxy struct {
 	// The transport used to perform proxy requests.
 	// If nil, http.DefaultTransport is used.
 	Transport http.RoundTripper
@@ -84,7 +84,7 @@ func (c *runOnFirstRead) Read(bs []byte) (int, error) {
 }
 
 // Now only intended for use in tests.
-func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (p *reverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	err := p.Proxy(rw, req)
 	if err != nil {
 		log.Printf("proxy error:", err)
@@ -93,7 +93,7 @@ func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 // Proxy makes a request and proxies the response to the response writer.
-func (p *ReverseProxy) Proxy(rw http.ResponseWriter, proxyreq *http.Request) error {
+func (p *reverseProxy) Proxy(rw http.ResponseWriter, proxyreq *http.Request) error {
 	transport := p.Transport
 	if transport == nil {
 		transport = http.DefaultTransport
@@ -187,7 +187,7 @@ func (p *ReverseProxy) Proxy(rw http.ResponseWriter, proxyreq *http.Request) err
 	return nil
 }
 
-func (p *ReverseProxy) copyResponse(dst io.Writer, src io.Reader) {
+func (p *reverseProxy) copyResponse(dst io.Writer, src io.Reader) {
 	if p.FlushInterval != 0 {
 		if wf, ok := dst.(writeFlusher); ok {
 			mlw := &maxLatencyWriter{
