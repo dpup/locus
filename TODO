@@ -6,8 +6,11 @@ Needed to replace NGINX for my personal sites:
 - Separate out access.log and error.log
 
 Needed to replace ELBs in-front of ECS services:
-- ECS upstream provider, ideas:
-    - Use SDK to query for matching containers (http://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_DescribeContainerInstances.html)
+- ECS upstream provider, use AWS SDK
+    - Find tasks: http://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_DescribeTasks.html
+    - Look up hosts: http://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_DescribeContainerInstances.html
+    - Get IP of host: http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-DescribeInstances.html
+    - How to minimize downtime due to changes? Update on error?
 
 Nice to haves:
 - Allow configs to set timeouts, port, etc.
