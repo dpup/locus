@@ -165,16 +165,3 @@ func (c *Config) StripHeader(key string) {
 	key = http.CanonicalHeaderKey(key)
 	c.stripHeaders = append(c.stripHeaders, key)
 }
-
-// From https://golang.org/src/net/http/httputil/reverseproxy.go#L63
-func singleJoiningSlash(a, b string) string {
-	aslash := strings.HasSuffix(a, "/")
-	bslash := strings.HasPrefix(b, "/")
-	switch {
-	case aslash && bslash:
-		return a + b[1:]
-	case !aslash && !bslash:
-		return a + "/" + b
-	}
-	return a + b
-}

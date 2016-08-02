@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -29,19 +28,18 @@ func init() {
 	hopHeaders = append(hopHeaders, fakeHopHeader)
 }
 
-func newSingleHostReverseProxy(target *url.URL) *ReverseProxy {
+// Forked copy of ReverseProxy requires transformed URL before handling.
+func transform(target *url.URL, req *http.Request) *http.Request {
 	targetQuery := target.RawQuery
-	director := func(req *http.Request) {
-		req.URL.Scheme = target.Scheme
-		req.URL.Host = target.Host
-		req.URL.Path = singleJoiningSlash(target.Path, req.URL.Path)
-		if targetQuery == "" || req.URL.RawQuery == "" {
-			req.URL.RawQuery = targetQuery + req.URL.RawQuery
-		} else {
-			req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
-		}
+	req.URL.Scheme = target.Scheme
+	req.URL.Host = target.Host
+	req.URL.Path = singleJoiningSlash(target.Path, req.URL.Path)
+	if targetQuery == "" || req.URL.RawQuery == "" {
+		req.URL.RawQuery = targetQuery + req.URL.RawQuery
+	} else {
+		req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
 	}
-	return &ReverseProxy{Director: director}
+	return req
 }
 
 func TestReverseProxy(t *testing.T) {
@@ -83,8 +81,13 @@ func TestReverseProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proxyHandler := newSingleHostReverseProxy(backendURL)
-	frontend := httptest.NewServer(proxyHandler)
+	proxyHandler := &ReverseProxy{}
+	frontend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err := proxyHandler.Proxy(w, transform(backendURL, r))
+		if err != nil {
+			t.Error(err)
+		}
+	}))
 	defer frontend.Close()
 
 	getReq, _ := http.NewRequest("GET", frontend.URL, nil)
@@ -149,7 +152,7 @@ func TestXForwardedFor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proxyHandler := newSingleHostReverseProxy(backendURL)
+	proxyHandler := &ReverseProxy{}
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
 
@@ -158,7 +161,7 @@ func TestXForwardedFor(t *testing.T) {
 	getReq.Header.Set("Connection", "close")
 	getReq.Header.Set("X-Forwarded-For", prevForwardedFor)
 	getReq.Close = true
-	res, err := http.DefaultClient.Do(getReq)
+	res, err := http.DefaultClient.Do(transform(backendURL, getReq))
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -194,10 +197,10 @@ func TestReverseProxyQuery(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		frontend := httptest.NewServer(newSingleHostReverseProxy(backendURL))
+		frontend := httptest.NewServer(&ReverseProxy{})
 		req, _ := http.NewRequest("GET", frontend.URL+tt.reqSuffix, nil)
 		req.Close = true
-		res, err := http.DefaultClient.Do(req)
+		res, err := http.DefaultClient.Do(transform(backendURL, req))
 		if err != nil {
 			t.Fatalf("%d. Get: %v", i, err)
 		}
@@ -221,14 +224,19 @@ func TestReverseProxyFlushInterval(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proxyHandler := newSingleHostReverseProxy(backendURL)
+	proxyHandler := &ReverseProxy{}
 	proxyHandler.FlushInterval = time.Microsecond
 
 	done := make(chan bool)
 	onExitFlushLoop = func() { done <- true }
 	defer func() { onExitFlushLoop = nil }()
 
-	frontend := httptest.NewServer(proxyHandler)
+	frontend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err := proxyHandler.Proxy(w, transform(backendURL, r))
+		if err != nil {
+			t.Error(err)
+		}
+	}))
 	defer frontend.Close()
 
 	req, _ := http.NewRequest("GET", frontend.URL, nil)
@@ -272,18 +280,12 @@ func TestReverseProxyCancelation(t *testing.T) {
 
 	defer backend.Close()
 
-	backend.Config.ErrorLog = log.New(ioutil.Discard, "", 0)
-
 	backendURL, err := url.Parse(backend.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	proxyHandler := newSingleHostReverseProxy(backendURL)
-
-	// Discards errors of the form:
-	// http: proxy error: read tcp 127.0.0.1:44643: use of closed network connection
-	proxyHandler.ErrorLog = log.New(ioutil.Discard, "", 0)
+	proxyHandler := &ReverseProxy{}
 
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
@@ -293,7 +295,7 @@ func TestReverseProxyCancelation(t *testing.T) {
 		<-reqInFlight
 		http.DefaultTransport.(*http.Transport).CancelRequest(getReq)
 	}()
-	res, err := http.DefaultClient.Do(getReq)
+	res, err := http.DefaultClient.Do(transform(backendURL, getReq))
 	if res != nil {
 		t.Fatal("Non-nil response")
 	}
@@ -322,10 +324,13 @@ func TestNilBody(t *testing.T) {
 
 	frontend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		backURL, _ := url.Parse(backend.URL)
-		rp := newSingleHostReverseProxy(backURL)
+		rp := &ReverseProxy{}
 		r := req(t, "GET / HTTP/1.0\r\n\r\n")
 		r.Body = nil // this accidentally worked in Go 1.4 and below, so keep it working
-		rp.ServeHTTP(w, r)
+		err := rp.Proxy(w, transform(backURL, r))
+		if err != nil {
+			t.Error(err)
+		}
 	}))
 	defer frontend.Close()
 
@@ -372,7 +377,7 @@ func TestReverseProxyGetPutBuffer(t *testing.T) {
 		defer mu.Unlock()
 		log = append(log, event)
 	}
-	rp := newSingleHostReverseProxy(backendURL)
+	rp := &ReverseProxy{}
 	const size = 1234
 	rp.BufferPool = bufferPool{
 		get: func() []byte {
@@ -383,7 +388,12 @@ func TestReverseProxyGetPutBuffer(t *testing.T) {
 			addLog("putBuf-" + strconv.Itoa(len(p)))
 		},
 	}
-	frontend := httptest.NewServer(rp)
+	frontend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err := rp.Proxy(w, transform(backendURL, r))
+		if err != nil {
+			t.Error(err)
+		}
+	}))
 	defer frontend.Close()
 
 	req, _ := http.NewRequest("GET", frontend.URL, nil)
@@ -430,12 +440,12 @@ func TestReverseProxy_Post(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proxyHandler := newSingleHostReverseProxy(backendURL)
+	proxyHandler := &ReverseProxy{}
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
 
 	postReq, _ := http.NewRequest("POST", frontend.URL, bytes.NewReader(requestBody))
-	res, err := http.DefaultClient.Do(postReq)
+	res, err := http.DefaultClient.Do(transform(backendURL, postReq))
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}

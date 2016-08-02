@@ -7,6 +7,7 @@
 package locus
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -24,12 +25,6 @@ var onExitFlushLoop func()
 // sends it to another server, proxying the response back to the
 // client.
 type ReverseProxy struct {
-	// Director must be a function which modifies
-	// the request into a new request to be sent
-	// using Transport. Its response is then copied
-	// back to the original client unmodified.
-	Director func(*http.Request)
-
 	// The transport used to perform proxy requests.
 	// If nil, http.DefaultTransport is used.
 	Transport http.RoundTripper
@@ -39,12 +34,6 @@ type ReverseProxy struct {
 	// response body.
 	// If zero, no periodic flushing is done.
 	FlushInterval time.Duration
-
-	// ErrorLog specifies an optional logger for errors
-	// that occur when attempting to proxy the request.
-	// If nil, logging goes to os.Stderr via the log package's
-	// standard logger.
-	ErrorLog *log.Logger
 
 	// BufferPool optionally specifies a buffer pool to
 	// get byte slices for use by io.CopyBuffer when
@@ -57,14 +46,6 @@ type ReverseProxy struct {
 type BufferPool interface {
 	Get() []byte
 	Put([]byte)
-}
-
-func copyHeader(dst, src http.Header) {
-	for k, vv := range src {
-		for _, v := range vv {
-			dst.Add(k, v)
-		}
-	}
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -102,14 +83,21 @@ func (c *runOnFirstRead) Read(bs []byte) (int, error) {
 	return c.Reader.Read(bs)
 }
 
+// Now only intended for use in tests.
 func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	err := p.Proxy(rw, req)
+	if err != nil {
+		log.Printf("proxy error:", err)
+		rw.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+// Proxy makes a request and proxies the response to the response writer.
+func (p *ReverseProxy) Proxy(rw http.ResponseWriter, proxyreq *http.Request) error {
 	transport := p.Transport
 	if transport == nil {
 		transport = http.DefaultTransport
 	}
-
-	outreq := new(http.Request)
-	*outreq = *req // includes shallow copies of maps, but okay
 
 	if closeNotifier, ok := rw.(http.CloseNotifier); ok {
 		if requestCanceler, ok := transport.(requestCanceler); ok {
@@ -118,65 +106,54 @@ func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 			clientGone := closeNotifier.CloseNotify()
 
-			outreq.Body = struct {
+			proxyreq.Body = struct {
 				io.Reader
 				io.Closer
 			}{
 				Reader: &runOnFirstRead{
-					Reader: outreq.Body,
+					Reader: proxyreq.Body,
 					fn: func() {
 						go func() {
 							select {
 							case <-clientGone:
-								requestCanceler.CancelRequest(outreq)
+								requestCanceler.CancelRequest(proxyreq)
 							case <-reqDone:
 							}
 						}()
 					},
 				},
-				Closer: outreq.Body,
+				Closer: proxyreq.Body,
 			}
 		}
 	}
 
-	p.Director(outreq)
-	outreq.Proto = "HTTP/1.1"
-	outreq.ProtoMajor = 1
-	outreq.ProtoMinor = 1
-	outreq.Close = false
+	proxyreq.Proto = "HTTP/1.1"
+	proxyreq.ProtoMajor = 1
+	proxyreq.ProtoMinor = 1
+	proxyreq.Close = false
 
 	// Remove hop-by-hop headers to the backend.  Especially
 	// important is "Connection" because we want a persistent
-	// connection, regardless of what the client sent to us.  This
-	// is modifying the same underlying map from req (shallow
-	// copied above) so we only copy it if necessary.
-	copiedHeaders := false
+	// connection, regardless of what the client sent to us.
 	for _, h := range hopHeaders {
-		if outreq.Header.Get(h) != "" {
-			if !copiedHeaders {
-				outreq.Header = make(http.Header)
-				copyHeader(outreq.Header, req.Header)
-				copiedHeaders = true
-			}
-			outreq.Header.Del(h)
+		if proxyreq.Header.Get(h) != "" {
+			proxyreq.Header.Del(h)
 		}
 	}
 
-	if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
+	if clientIP, _, err := net.SplitHostPort(proxyreq.RemoteAddr); err == nil {
 		// If we aren't the first proxy retain prior
 		// X-Forwarded-For information as a comma+space
 		// separated list and fold multiple headers into one.
-		if prior, ok := outreq.Header["X-Forwarded-For"]; ok {
+		if prior, ok := proxyreq.Header["X-Forwarded-For"]; ok {
 			clientIP = strings.Join(prior, ", ") + ", " + clientIP
 		}
-		outreq.Header.Set("X-Forwarded-For", clientIP)
+		proxyreq.Header.Set("X-Forwarded-For", clientIP)
 	}
 
-	res, err := transport.RoundTrip(outreq)
+	res, err := transport.RoundTrip(proxyreq)
 	if err != nil {
-		p.logf("http: proxy error: %v", err)
-		rw.WriteHeader(http.StatusInternalServerError)
-		return
+		return fmt.Errorf("proxy error: %v", err)
 	}
 
 	for _, h := range hopHeaders {
@@ -207,6 +184,7 @@ func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	p.copyResponse(rw, res.Body)
 	res.Body.Close() // close now, instead of defer, to populate res.Trailer
 	copyHeader(rw.Header(), res.Trailer)
+	return nil
 }
 
 func (p *ReverseProxy) copyResponse(dst io.Writer, src io.Reader) {
@@ -230,14 +208,6 @@ func (p *ReverseProxy) copyResponse(dst io.Writer, src io.Reader) {
 	io.CopyBuffer(dst, src, buf)
 	if p.BufferPool != nil {
 		p.BufferPool.Put(buf)
-	}
-}
-
-func (p *ReverseProxy) logf(format string, args ...interface{}) {
-	if p.ErrorLog != nil {
-		p.ErrorLog.Printf(format, args...)
-	} else {
-		log.Printf(format, args...)
 	}
 }
 

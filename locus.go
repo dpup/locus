@@ -31,7 +31,7 @@ type Locus struct {
 func New() *Locus {
 	locus := &Locus{}
 	locus.configs = []*Config{}
-	locus.proxy = &ReverseProxy{Director: locus.director}
+	locus.proxy = &ReverseProxy{}
 	return locus
 }
 
@@ -84,25 +84,42 @@ func (locus *Locus) Serve(port uint16, readTimeout, writeTimeout time.Duration) 
 }
 
 func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	locus.proxy.ServeHTTP(rw, req)
-}
+	c := locus.findConfig(req)
+	if c != nil {
+		// Found matching config so copy req, transform it, and forward it.
+		proxyreq := copyRequest(req)
 
-func (locus *Locus) director(req *http.Request) {
-	for _, c := range locus.configs {
-		if c.Matches(req) {
-			err := c.Transform(req)
-			if err != nil { // TODO: Render local error page.
-				locus.elogf("Error transforming request: %s", err)
-			}
-			if locus.VerboseLogging {
-				d, _ := httputil.DumpRequestOut(req, false)
-				locus.alogf("locus[%s] %s %s://%s %s", c.Name, req.RemoteAddr, req.URL.Scheme, req.URL.Host, string(d))
-			} else {
-				locus.alogf("locus[%s] %s %s %s://%s%s", c.Name, req.RemoteAddr, req.Method, req.URL.Scheme, req.URL.Host, req.URL.Path)
-			}
+		if err := c.Transform(proxyreq); err != nil { // TODO: Render local error page.
+			locus.elogf("error transforming request: %v", err)
+			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		if err := locus.proxy.Proxy(rw, proxyreq); err != nil { // TODO: Render local error page.
+			locus.elogf("error proxying request: %v", err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if locus.VerboseLogging {
+			d, _ := httputil.DumpRequestOut(proxyreq, false)
+			locus.alogf("locus[%s] %s %s://%s %s", c.Name, proxyreq.RemoteAddr, proxyreq.URL.Scheme, proxyreq.URL.Host, string(d))
+		} else {
+			locus.alogf("locus[%s] %s %s %s://%s%s", c.Name, proxyreq.RemoteAddr, proxyreq.Method, proxyreq.URL.Scheme, proxyreq.URL.Host, proxyreq.URL.Path)
+		}
+	} else {
+		// TODO: See if the path matches any local handlers.
+		rw.WriteHeader(http.StatusNotImplemented)
 	}
+}
+
+func (locus *Locus) findConfig(req *http.Request) *Config {
+	for _, c := range locus.configs {
+		if c.Matches(req) {
+			return c
+		}
+	}
+	return nil
 }
 
 func (locus *Locus) alogf(format string, args ...interface{}) {
