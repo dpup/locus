@@ -28,7 +28,7 @@ func init() {
 	hopHeaders = append(hopHeaders, fakeHopHeader)
 }
 
-// Forked copy of reverseProxy requires transformed URL before handling.
+// Forked copy of ReverseProxy requires transformed URL before handling.
 func transform(target *url.URL, req *http.Request) *http.Request {
 	targetQuery := target.RawQuery
 	req.URL.Scheme = target.Scheme
