@@ -35,6 +35,10 @@ type urlMatcher struct {
 	query        url.Values
 }
 
+func (um *urlMatcher) String() string {
+	return um.url.String()
+}
+
 func (um *urlMatcher) Matches(req *http.Request) bool {
 	ok, _ := um.MatchWithReason(req)
 	return ok

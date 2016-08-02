@@ -16,13 +16,13 @@ type Config struct {
 	// the path provided in the URL string.
 	PathPrefix string
 
-	// requestMatcher is used to determine whether a config matches an incoming
+	// RequestMatcher is used to determine whether a config matches an incoming
 	// request and should be used to configure the proxied request.
-	requestMatcher RequestMatcher
+	RequestMatcher RequestMatcher
 
-	// upstreamProvider is used to fetch a list of candidate upstreams to proxy
+	// UpstreamProvider is used to fetch a list of candidate upstreams to proxy
 	// the request to.
-	upstreamProvider UpstreamProvider
+	UpstreamProvider UpstreamProvider
 
 	stripHeaders []string
 	setHeaders   map[string]string
@@ -67,7 +67,7 @@ type Config struct {
 //     proxied   = http://upstream.com/xyz/ghi
 //
 func (c *Config) Transform(req *http.Request) error {
-	upstream, err := c.upstreamProvider.Get(req)
+	upstream, err := c.UpstreamProvider.Get(req)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (c *Config) Transform(req *http.Request) error {
 
 // Matches returns true if this config can be used for the provided request.
 func (c *Config) Matches(req *http.Request) bool {
-	return c.requestMatcher.Matches(req)
+	return c.RequestMatcher.Matches(req)
 }
 
 // Bind configures this config to target the provided URL.
@@ -116,13 +116,13 @@ func (c *Config) Matches(req *http.Request) bool {
 // Query params are exact match, but not exclusive. Ports 80 and 443 are implied
 // if a scheme is present without explicit port. A URL with a host and no schemeor port will match all ports.
 //
-// See requestmatcher_test.go for examples.
+// See RequestMatcher_test.go for examples.
 func (c *Config) Bind(urlStr string) error {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return err
 	}
-	c.requestMatcher = &urlMatcher{url: u}
+	c.RequestMatcher = &urlMatcher{url: u}
 	c.PathPrefix = u.Path
 	return nil
 }
@@ -134,7 +134,7 @@ func (c *Config) Bind(urlStr string) error {
 // upstream server. `Random(urls)` or `RoundRobin(urls)` can be used to choose
 // from a fixed set of servers. Other implementations exist.
 func (c *Config) Upstream(u UpstreamProvider) {
-	c.upstreamProvider = u
+	c.UpstreamProvider = u
 }
 
 // AddHeader specifies a header to add to the proxied request.

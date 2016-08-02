@@ -2,8 +2,8 @@
 Needed to replace NGINX for my personal sites:
 - Upstream retry settings.
 - Upstream failover settings.
-- Gracefully handle downstream errors
-- Debug page showing configs and status of upstreams
+- Gracefully handle downstream errors.
+- Package templates in the binary.
 
 Needed to replace ELBs in-front of ECS services:
 - ECS upstream provider, use AWS SDK
@@ -20,3 +20,4 @@ Nice to haves:
 - Add leastconn upsteam selection option
 - Healthcheck on single upstream
 - Extend Bind / RequestMatcher, to allow binding based on headers and other features.
+- Debug page shows connections, failures, etc.

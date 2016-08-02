@@ -2,10 +2,12 @@ package locus
 
 import (
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"path"
 	"time"
 )
 
@@ -24,6 +26,9 @@ type Locus struct {
 	// logging goes to os.Stderr via the log package's standard logger.
 	ErrorLog *log.Logger
 
+	// TmplPath specifies the location of HTML templates.
+	TmplPath string
+
 	configs []*Config
 	proxy   *reverseProxy
 }
@@ -31,6 +36,7 @@ type Locus struct {
 // New returns an empty instance of a Locus.
 func New() *Locus {
 	locus := &Locus{}
+	locus.TmplPath = "github.com/dpup/locus/tmpl"
 	locus.configs = []*Config{}
 	locus.proxy = &reverseProxy{}
 	return locus
@@ -108,8 +114,18 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		} else {
 			locus.alogf("locus[%s] %s %s %s://%s%s", c.Name, proxyreq.RemoteAddr, proxyreq.Method, proxyreq.URL.Scheme, proxyreq.URL.Host, proxyreq.URL.Path)
 		}
+	} else if req.URL.Path == "/debug/configs" {
+		// Renders a debug page with information about the configs.
+		tmpl, err := locus.loadTemplates()
+		if err == nil {
+			err = tmpl.ExecuteTemplate(rw, "configs", locus.configs)
+		}
+		if err != nil { // TODO: Render local error page.
+			locus.elogf("error rendering upstreams debug page: %v", err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	} else {
-		// TODO: See if the path matches any local handlers.
 		rw.WriteHeader(http.StatusNotImplemented)
 	}
 }
@@ -121,6 +137,11 @@ func (locus *Locus) findConfig(req *http.Request) *Config {
 		}
 	}
 	return nil
+}
+
+func (locus *Locus) loadTemplates() (*template.Template, error) {
+	// TODO: cache.
+	return template.New("root").ParseGlob(path.Join(locus.TmplPath, "*.html"))
 }
 
 func (locus *Locus) alogf(format string, args ...interface{}) {

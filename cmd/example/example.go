@@ -21,7 +21,10 @@ func main() {
 	// open localhost:5555/wiki/England
 	wiki := proxy.NewConfig()
 	wiki.Bind("/wiki")
-	wiki.Upstream(locus.Single("https://en.wikipedia.org"))
+	wiki.Upstream(locus.Random([]string{
+		"https://en.wikipedia.org",
+		"https://www.wikipedia.org",
+	}))
 	wiki.StripHeader("Cookie")
 	wiki.SetHeader("Host", "en.wikipedia.org")
 	wiki.SetHeader("Referer", "https://en.wikipedia.org/wiki/Main_Page")

@@ -91,7 +91,7 @@ func loadConfigsFromYAML(data []byte) ([]*Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error loading config: %s", err)
 		}
-		if cfg.upstreamProvider == nil {
+		if cfg.UpstreamProvider == nil {
 			return nil, fmt.Errorf("missing upstream in %s, must specify one of 'upstream' or 'upstream_set'", cfg.Name)
 		}
 		cfgs = append(cfgs, cfg)

@@ -19,6 +19,10 @@ type UpstreamProvider interface {
 
 	// All returns all the known upstream URLs.
 	All() ([]*url.URL, error)
+
+	// DebugInfo returns information about the upstream, for presentation on debug
+	// screens.
+	DebugInfo() map[string]string
 }
 
 // Single returns a provider that only has one upstream.
@@ -34,7 +38,7 @@ func Single(urlStr string) UpstreamProvider {
 //       "back-3.test.com",
 //     }))
 func Random(urlStrs []string) UpstreamProvider {
-	return &fixedSet{urlStrs: urlStrs, pickFn: random}
+	return &fixedSet{urlStrs: urlStrs, strategy: "random", pickFn: random}
 }
 
 // RoundRobin returns an upstream provider which cycles through the set of URLs.
@@ -45,18 +49,31 @@ func Random(urlStrs []string) UpstreamProvider {
 //       "back-3.test.com",
 //     }))
 func RoundRobin(urlStrs []string) UpstreamProvider {
-	return &fixedSet{urlStrs: urlStrs, pickFn: roundRobin(len(urlStrs))}
+	return &fixedSet{urlStrs: urlStrs, strategy: "round robin", pickFn: roundRobin(len(urlStrs))}
 }
 
 // fixedSet implements UpstreamProvider, storing a fixed set of URLs, and
 // caches parsed URLs and any error that occurred.
 type fixedSet struct {
-	urlStrs []string
-	pickFn  func(urls []*url.URL) *url.URL
+	urlStrs  []string
+	pickFn   func(urls []*url.URL) *url.URL
+	strategy string
 
 	urls []*url.URL
 	err  error
 	mu   sync.Mutex
+}
+
+// DebugInfo returns whether the set is in an error state.
+func (ru *fixedSet) DebugInfo() map[string]string {
+	m := map[string]string{}
+	if ru.err != nil {
+		m["error"] = ru.err.Error()
+	}
+	if ru.strategy != "" {
+		m["strategy"] = ru.strategy
+	}
+	return m
 }
 
 // Get returns a random upstream.
@@ -138,6 +155,22 @@ type DNSSet struct {
 	expiresAt time.Time
 	err       error
 	mu        sync.Mutex
+}
+
+func (ds *DNSSet) DebugInfo() map[string]string {
+	m := map[string]string{}
+	if ds.err != nil {
+		m["error"] = ds.err.Error()
+	}
+	if ds.RoundRobin {
+		m["strategy"] = "round robin"
+	} else {
+		m["strategy"] = "random"
+	}
+	m["allow stale"] = fmt.Sprintf("%v", ds.AllowStale)
+	m["TTL"] = ds.ttl().String()
+	m["expires at"] = ds.expiresAt.Format(time.Stamp)
+	return m
 }
 
 // Get returns a random upstream.
