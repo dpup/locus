@@ -13,6 +13,12 @@ import (
 // loaded from a file. It is also used in tests as a canonical example that
 // exercises all options.
 const SampleYAMLConfig = `
+# The 'globals' section contains settings that affect the core operation of the
+# proxy.
+globals:
+  port: 5556
+  read_timeout: 10s
+  write_timeout: 20s
 # The 'defaults' section contains settings to be applied to all sites.
 defaults:
   add_header:
@@ -49,6 +55,15 @@ sites:
     round_robin: true
 `
 
+type globalSettings struct {
+	Port           uint16        `yaml:"port"`
+	ReadTimeout    time.Duration `yaml:"read_timeout"`
+	WriteTimeout   time.Duration `yaml:"write_timeout"`
+	VerboseLogging bool          `yaml:"verbose_logging"`
+	AccessLog      string        `yaml:"access_log"`
+	ErrorLog       string        `yaml:"error_log"`
+}
+
 type yamlSiteConfig struct {
 	Name         string            `yaml:"name"`
 	Match        string            `yaml:"match"`
@@ -65,23 +80,24 @@ type yamlSiteConfig struct {
 }
 
 type yamlConfig struct {
+	Globals  globalSettings   `yaml:"globals"`
 	Defaults yamlSiteConfig   `yaml:"defaults"`
 	Sites    []yamlSiteConfig `yaml:"sites"`
 }
 
-func loadConfigsFromYAML(data []byte) ([]*Config, error) {
+func loadConfigFromYAML(data []byte) ([]*Config, *globalSettings, error) {
 	cfgs := []*Config{}
 
 	yc := yamlConfig{}
 	err := yaml.Unmarshal(data, &yc)
 	if err != nil {
-		return nil, fmt.Errorf("error loading YAML: %s", err)
+		return nil, nil, fmt.Errorf("error loading YAML: %s", err)
 	}
 
 	defaultCfg := &Config{}
 	err = siteFromYAML(yc.Defaults, defaultCfg)
 	if err != nil {
-		return nil, fmt.Errorf("error loading default cfg: %s", err)
+		return nil, nil, fmt.Errorf("error loading default cfg: %s", err)
 	}
 
 	for _, site := range yc.Sites {
@@ -89,15 +105,15 @@ func loadConfigsFromYAML(data []byte) ([]*Config, error) {
 		*cfg = *defaultCfg
 		err := siteFromYAML(site, cfg)
 		if err != nil {
-			return nil, fmt.Errorf("error loading config: %s", err)
+			return nil, nil, fmt.Errorf("error loading config: %s", err)
 		}
 		if cfg.UpstreamProvider == nil {
-			return nil, fmt.Errorf("missing upstream in %s, must specify one of 'upstream' or 'upstream_set'", cfg.Name)
+			return nil, nil, fmt.Errorf("missing upstream in %s, must specify one of 'upstream' or 'upstream_set'", cfg.Name)
 		}
 		cfgs = append(cfgs, cfg)
 	}
 
-	return cfgs, nil
+	return cfgs, &yc.Globals, nil
 }
 
 func siteFromYAML(site yamlSiteConfig, cfg *Config) error {

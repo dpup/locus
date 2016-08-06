@@ -36,9 +36,28 @@ td[colspan="2"] {
 </head>
 <body>
 <table>
-  {{range .}}
+  <tr>
+    <td colspan="2">Globals</td>
+  </tr>
+  <tr>
+    <td>local port:</td>
+    <td>{{.Port}}</td>
+  </tr>
+  <tr>
+    <td>read timeout:</td>
+    <td>{{.ReadTimeout}}</td>
+  </tr>
+  <tr>
+    <td>write timeout:</td>
+    <td>{{.WriteTimeout}}</td>
+  </tr>
+  <tr>
+    <td>verbose logging:</td>
+    <td>{{.VerboseLogging}}</td>
+  </tr>
+  {{range .Configs}}
     <tr>
-      <td colspan="2">{{.Name}}</td>
+      <td colspan="2">Site: {{.Name}}</td>
     </tr>
     <tr>
       <td>binding:</td>

@@ -40,23 +40,23 @@ func (um *urlMatcher) String() string {
 }
 
 func (um *urlMatcher) Matches(req *http.Request) bool {
-	ok, _ := um.MatchWithReason(req)
+	ok, _ := um.MatchWithReason(req.URL)
 	return ok
 }
 
-func (um *urlMatcher) MatchWithReason(req *http.Request) (bool, string) {
+func (um *urlMatcher) MatchWithReason(u *url.URL) (bool, string) {
 	um.preprocess()
 
-	if um.url.Scheme != "" && um.url.Scheme != req.URL.Scheme {
+	if um.url.Scheme != "" && um.url.Scheme != u.Scheme {
 		return false, "scheme mismatch"
 	}
-	if um.url.Host != "" && !um.matchHost(req) {
+	if um.url.Host != "" && !um.matchHost(u) {
 		return false, "host mismatch"
 	}
-	if um.url.Path != "" && !strings.HasPrefix(req.URL.Path, um.url.Path) {
+	if um.url.Path != "" && !strings.HasPrefix(u.Path, um.url.Path) {
 		return false, "path prefix mismatch"
 	}
-	if um.url.RawQuery != "" && !um.matchQuery(req) {
+	if um.url.RawQuery != "" && !um.matchQuery(u) {
 		return false, "query mismatch"
 	}
 	return true, "match"
@@ -74,14 +74,14 @@ func (um *urlMatcher) preprocess() {
 	}
 }
 
-func (um *urlMatcher) matchHost(req *http.Request) bool {
-	host, port := splitHost(req.URL)
+func (um *urlMatcher) matchHost(u *url.URL) bool {
+	host, port := splitHost(u)
 	return (um.host == "" || um.host == host || (um.wild && strings.HasSuffix(host, um.host))) &&
 		(um.port == "" || um.port == port)
 }
 
-func (um *urlMatcher) matchQuery(req *http.Request) bool {
-	query := req.URL.Query()
+func (um *urlMatcher) matchQuery(u *url.URL) bool {
+	query := u.Query()
 	for k, v := range um.query {
 		if query.Get(k) != v[0] {
 			return false
@@ -90,14 +90,14 @@ func (um *urlMatcher) matchQuery(req *http.Request) bool {
 	return true
 }
 
-func splitHost(url *url.URL) (host, port string) {
-	parts := strings.Split(url.Host, ":")
+func splitHost(u *url.URL) (host, port string) {
+	parts := strings.Split(u.Host, ":")
 	host = parts[0]
 	if len(parts) == 2 {
 		port = parts[1]
-	} else if url.Scheme == "https" {
+	} else if u.Scheme == "https" {
 		port = "443"
-	} else if url.Scheme == "http" {
+	} else if u.Scheme == "http" {
 		port = "80"
 	}
 	return

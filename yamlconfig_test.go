@@ -8,10 +8,22 @@ import (
 )
 
 func TestLoadConfig(t *testing.T) {
-	cfgs, err := loadConfigsFromYAML([]byte(SampleYAMLConfig))
+	cfgs, globals, err := loadConfigFromYAML([]byte(SampleYAMLConfig))
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
+	}
+
+	if globals.Port != 5556 {
+		t.Errorf("Expected port 5556, was %d", globals.Port)
+	}
+
+	if globals.ReadTimeout != 10*time.Second {
+		t.Errorf("Expected read timeout to be 10s, was %s", globals.ReadTimeout)
+	}
+
+	if globals.WriteTimeout != 20*time.Second {
+		t.Errorf("Expected write timeout to be 20s, was %s", globals.WriteTimeout)
 	}
 
 	about := cfgs[0]
@@ -19,7 +31,7 @@ func TestLoadConfig(t *testing.T) {
 	fallthru := cfgs[2]
 
 	// Verify the first site has a single URL upstream.
-	actual1, err := about.upstreamProvider.All()
+	actual1, err := about.UpstreamProvider.All()
 	expected1 := []*url.URL{mustParseURL("http://about-1.mysite.com")}
 	checkError(t, err, "fetching 'about' upstreams")
 	if !reflect.DeepEqual(actual1, expected1) {
@@ -27,7 +39,7 @@ func TestLoadConfig(t *testing.T) {
 	}
 
 	// Verify the second site has a fixed set of URLs.
-	actual2, err := search.upstreamProvider.All()
+	actual2, err := search.UpstreamProvider.All()
 	expected2 := []*url.URL{
 		mustParseURL("http://search-1.mysite.com"),
 		mustParseURL("http://search-2.mysite.com"),
@@ -39,7 +51,7 @@ func TestLoadConfig(t *testing.T) {
 	}
 
 	// Verify the third site uses DNS.
-	if ds, ok := fallthru.upstreamProvider.(*DNSSet); ok {
+	if ds, ok := fallthru.UpstreamProvider.(*DNSSet); ok {
 		actual3, err := ds.All()
 		expected3 := []*url.URL{
 			mustParseURL("http://192.168.0.0:4000/2016/mysite/"),

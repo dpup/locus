@@ -84,7 +84,7 @@ func TestUrlMatcher(t *testing.T) {
 
 	for _, tt := range urlTests {
 		um := &urlMatcher{url: mustParseURL(tt.matchurl)}
-		actual, reason := um.MatchWithReason(mustReq(tt.requrl))
+		actual, reason := um.MatchWithReason(mustParseURL(tt.requrl))
 		if actual != tt.expected {
 			t.Errorf("matching '%s' against '%s' => %v, want %v (%s)", tt.requrl, tt.matchurl, actual, tt.expected, reason)
 		}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/dpup/locus"
-	"time"
 )
 
 func main() {
@@ -36,5 +35,5 @@ func main() {
 	amazon.StripHeader("Cookie")
 	amazon.SetHeader("Host", "www.amazon.com")
 
-	panic(proxy.Serve(5555, 10*time.Second, 10*time.Second))
+	panic(proxy.ListenAndServe())
 }
