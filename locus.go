@@ -2,17 +2,18 @@ package locus
 
 import (
 	"fmt"
-	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"path"
 	"time"
+
+	"github.com/dpup/locus/tmpl"
 )
 
-// Query param that when specified in the URL overrides the request in the URL.
+// OverrideQueryParam param that when specified in the URL overrides the request
+// in the URL.
 // e.g. http://localhost:5555/?locus_override=http://sample.locus.xyz
 const OverrideQueryParam = "locus_override"
 
@@ -30,9 +31,6 @@ type Locus struct {
 	// ErrorLog specifies an optional logger for exceptional occurances. If nil,
 	// logging goes to os.Stderr via the log package's standard logger.
 	ErrorLog *log.Logger
-
-	// TmplPath specifies the location of HTML templates.
-	TmplPath string
 
 	// Port specifies the port for incoming connections.
 	Port uint16
@@ -58,7 +56,6 @@ func New() *Locus {
 	return &Locus{
 		proxy:        &reverseProxy{},
 		Configs:      []*Config{},
-		TmplPath:     "github.com/dpup/locus/tmpl", // TODO: compile in?
 		Port:         5555,
 		ReadTimeout:  time.Second * 30,
 		WriteTimeout: time.Second * 30,
@@ -158,16 +155,7 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			locus.alogf("locus[%s] %s %s %s://%s%s", c.Name, proxyreq.RemoteAddr, proxyreq.Method, proxyreq.URL.Scheme, proxyreq.URL.Host, proxyreq.URL.Path)
 		}
 	} else if req.URL.Path == "/debug/configs" {
-		// Renders a debug page with information about the configs.
-		tmpl, err := locus.loadTemplates()
-		if err == nil {
-			err = tmpl.ExecuteTemplate(rw, "configs", locus)
-		}
-		if err != nil { // TODO: Render local error page.
-			locus.elogf("error rendering upstreams debug page: %v", err)
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		tmpl.DebugTemplate.ExecuteTemplate(rw, "configs", locus)
 	} else {
 		rw.WriteHeader(http.StatusNotImplemented)
 	}
@@ -180,11 +168,6 @@ func (locus *Locus) findConfig(req *http.Request) *Config {
 		}
 	}
 	return nil
-}
-
-func (locus *Locus) loadTemplates() (*template.Template, error) {
-	// TODO: cache.
-	return template.New("root").ParseGlob(path.Join(locus.TmplPath, "*.html"))
 }
 
 func (locus *Locus) alogf(format string, args ...interface{}) {
