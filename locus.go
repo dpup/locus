@@ -199,11 +199,6 @@ func (locus *Locus) maybeApplyHostOverride(req *http.Request) {
 	}
 }
 
-func (locus *Locus) logDefaultReq(rw *recordingResponseWriter, req *http.Request) {
-	locus.alogf("locus[-] %d %s %s (%s \"%s\")", rw.Status(), req.Method, req.URL,
-		req.RemoteAddr, req.Header.Get("User-Agent"))
-}
-
 func (locus *Locus) findConfig(req *http.Request) *Config {
 	for _, c := range locus.Configs {
 		if c.Matches(req) {
@@ -211,6 +206,11 @@ func (locus *Locus) findConfig(req *http.Request) *Config {
 		}
 	}
 	return nil
+}
+
+func (locus *Locus) logDefaultReq(rw *recordingResponseWriter, req *http.Request) {
+	locus.alogf("locus[-] %d %s %s (%s \"%s\")", rw.Status(), req.Method, req.URL,
+		req.RemoteAddr, req.Header.Get("User-Agent"))
 }
 
 func (locus *Locus) alogf(format string, args ...interface{}) {
