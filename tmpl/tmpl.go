@@ -6,7 +6,7 @@ import (
 
 // Jankily avoid having to package templates separately from the binary. Only
 // doing this because there is only one template.
-//go:generate ./gen.sh
+//go:generate ./gen.sh "configs"
 
 func mustParse(name, str string) *template.Template {
 	t, err := template.New(name).Parse(str)

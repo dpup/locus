@@ -182,7 +182,7 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			req.Header.Get("User-Agent"), string(d))
 
 	} else if req.URL.Path == "/debug/configs" {
-		tmpl.DebugTemplate.ExecuteTemplate(rw, "configs", locus)
+		tmpl.ConfigsTemplate.Execute(rw, locus)
 		locus.logDefaultReq(http.StatusOK, req)
 	} else {
 		rw.WriteHeader(http.StatusNotImplemented)
