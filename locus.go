@@ -142,10 +142,7 @@ func (locus *Locus) ListenAndServe() error {
 }
 
 func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	overrideParam := req.URL.Query().Get(HostOverrideParam)
-	if overrideParam != "" {
-		req.URL.Host = overrideParam
-	}
+	locus.maybeApplyHostOverride(req)
 
 	c := locus.findConfig(req)
 	if c != nil {
@@ -165,7 +162,6 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 		if c.Redirect != 0 {
 			status = c.Redirect
-			proxyreq.URL.Query().Del(HostOverrideParam) // Avoid infinite loops.
 			rw.Header().Add("Location", proxyreq.URL.String())
 			rw.WriteHeader(c.Redirect)
 
@@ -190,6 +186,18 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	} else {
 		rw.WriteHeader(http.StatusNotImplemented)
 		locus.logDefaultReq(http.StatusNotImplemented, req)
+	}
+}
+
+func (locus *Locus) maybeApplyHostOverride(req *http.Request) {
+	q := req.URL.Query()
+	overrideParam := q.Get(HostOverrideParam)
+	if overrideParam != "" {
+		req.URL.Host = overrideParam
+
+		// Avoid infinite loops.
+		q.Del(HostOverrideParam)
+		req.URL.RawQuery = q.Encode()
 	}
 }
 
