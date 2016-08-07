@@ -148,10 +148,10 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if c != nil {
 		status := http.StatusOK // TODO: extract status code from rw.
 
-		// Found matching config so copy req, transform it, and forward it.
-		proxyreq := copyRequest(req)
+		// Found matching config so get a request for proxying.
+		proxyreq, err := c.Direct(req)
 
-		if err := c.Transform(proxyreq); err != nil { // TODO: Render local error page.
+		if err != nil { // TODO: Render local error page.
 			locus.elogf("error transforming request: %v", err)
 			rw.WriteHeader(http.StatusInternalServerError)
 			locus.logDefaultReq(http.StatusInternalServerError, req)

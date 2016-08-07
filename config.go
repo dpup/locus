@@ -1,111 +1,24 @@
 package locus
 
 import (
-	"net/http"
 	"net/url"
-	"strings"
 )
 
-// Config specifies what requests to handle, how to forward the request, and how
-// to transform the response.
+// Config specifies what requests to handle, how to direct the request, and
+// how to transform the response.
 type Config struct {
+	// Matcher specifies what requests this config should operate on.
 	Matcher
+
+	// Director specifies how to proxy/redirect requests.
+	Director
 
 	// User visible name for the config, used in debug pages and logs.
 	Name string
 
-	// PathPrefix will be stripped from the incoming request path, iff the
-	// upstream specifies a path in its URL. When using Config.Match it is set to
-	// the path provided in the URL string.
-	PathPrefix string
-
-	// UpstreamProvider is used to fetch a list of candidate upstreams to proxy
-	// the request to.
-	UpstreamProvider UpstreamProvider
-
 	// Redirect specfied a HTTP status code that should be issued along with a
 	// Location header. Should one of be 301, 302, 307.
 	Redirect int
-
-	stripHeaders []string
-	setHeaders   map[string]string
-	addHeaders   map[string][]string
-}
-
-// Transform applies a config to an HTTP request.
-//
-// By default, the Host header is not set to the upstream's host, as it is
-// common for upstreams to be IPs and to want the Host from the original
-// request. Use SetHeader("Host", "foo.com") if you desire alternate behavior.
-//
-// The UpstreamProvider is used to get a list of candidate upstreams, for now a
-// random one is chosen. The upstream is then used to set scheme and host on the
-// URL.
-//
-// If the upstream path is empty, the path is left unaltered. If the upststream
-// path is non empty, e.g. '/' or '/some/prefix/', then the proxied request's
-// path is set to the upstream path joined with a trimmed request path. For
-// default Matcher the required path prefix is stripped from the proxied
-// request.
-//
-// Examples 1: Pathless upstream proxies entire request path.
-//
-//     match     = http://abc.com/def
-//     upstream  = http://upstream.com
-//     request   = http://abc.com/def/ghi
-//     proxied   = http://upstream.com/def/ghi
-//
-// Examples 2: Upstream with trailing slash strips matched prefix.
-//
-//     match     = http://abc.com/def
-//     upstream  = http://upstream.com/
-//     request   = http://abc.com/def/ghi
-//     proxied   = http://upstream.com/ghi
-//
-// Examples 3: Upstream with path, strips matched prefix and concats remainder.
-//
-//     match     = http://abc.com/def
-//     upstream  = http://upstream.com/xyz
-//     request   = http://abc.com/def/ghi
-//     proxied   = http://upstream.com/xyz/ghi
-//
-func (c *Config) Transform(req *http.Request) error {
-	upstream, err := c.UpstreamProvider.Get(req)
-	if err != nil {
-		return err
-	}
-
-	// Update destination.
-	req.URL.Scheme = upstream.Scheme
-	req.URL.Host = upstream.Host
-
-	if upstream.Path != "" {
-		pathSuffix := strings.TrimPrefix(req.URL.Path, c.PathPrefix)
-		if pathSuffix == "" {
-			req.URL.Path = upstream.Path
-		} else {
-			req.URL.Path = singleJoiningSlash(upstream.Path, pathSuffix)
-		}
-	}
-
-	// Strip, set and add headers.
-	for _, h := range c.stripHeaders {
-		delete(req.Header, h)
-	}
-	for k, v := range c.setHeaders {
-		req.Header[k] = []string{v}
-		if k == "Host" {
-			req.Host = v
-		}
-	}
-	for k, v := range c.addHeaders {
-		if _, ok := req.Header[k]; !ok {
-			req.Header[k] = []string{}
-		}
-		req.Header[k] = append(req.Header[k], v...)
-	}
-
-	return nil
 }
 
 // Bind configures this config to target the provided URL.
@@ -133,32 +46,4 @@ func (c *Config) Bind(urlStr string) error {
 // from a fixed set of servers. Other implementations exist.
 func (c *Config) Upstream(u UpstreamProvider) {
 	c.UpstreamProvider = u
-}
-
-// AddHeader specifies a header to add to the proxied request.
-func (c *Config) AddHeader(key, value string) {
-	if c.addHeaders == nil {
-		c.addHeaders = map[string][]string{}
-	}
-	key = http.CanonicalHeaderKey(key)
-	if _, ok := c.addHeaders[key]; !ok {
-		c.addHeaders[key] = []string{}
-	}
-	c.addHeaders[key] = append(c.addHeaders[key], value)
-}
-
-// SetHeader specifies a header to set on the proxied request, overriding any
-// value that already exists.
-func (c *Config) SetHeader(key, value string) {
-	if c.setHeaders == nil {
-		c.setHeaders = map[string]string{}
-	}
-	key = http.CanonicalHeaderKey(key)
-	c.setHeaders[key] = value
-}
-
-// StripHeader specifices a header to be removed from the proxied request.
-func (c *Config) StripHeader(key string) {
-	key = http.CanonicalHeaderKey(key)
-	c.stripHeaders = append(c.stripHeaders, key)
 }
