@@ -144,32 +144,30 @@ func (locus *Locus) ListenAndServe() error {
 func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	locus.maybeApplyHostOverride(req)
 
+	rrw := &recordingResponseWriter{ResponseWriter: rw}
+
 	c := locus.findConfig(req)
 	if c != nil {
-		status := http.StatusOK // TODO: extract status code from rw.
-
 		// Found matching config so get a request for proxying.
 		proxyreq, err := c.Direct(req)
 
 		if err != nil { // TODO: Render local error page.
 			locus.elogf("error transforming request: %v", err)
-			rw.WriteHeader(http.StatusInternalServerError)
-			locus.logDefaultReq(http.StatusInternalServerError, req)
+			rrw.WriteHeader(http.StatusInternalServerError)
+			locus.logDefaultReq(rrw, req)
 			return
 		}
 
 		var d []byte
 
 		if c.Redirect != 0 {
-			status = c.Redirect
-			rw.Header().Add("Location", proxyreq.URL.String())
-			rw.WriteHeader(c.Redirect)
+			rrw.Header().Add("Location", proxyreq.URL.String())
+			rrw.WriteHeader(c.Redirect)
 
 		} else {
-			if err := locus.proxy.Proxy(rw, proxyreq); err != nil { // TODO: Render local error page.
+			if err := locus.proxy.Proxy(rrw, proxyreq); err != nil { // TODO: Render local error page.
 				locus.elogf("error proxying request: %v", err)
-				rw.WriteHeader(http.StatusInternalServerError)
-				status = http.StatusInternalServerError
+				rrw.WriteHeader(http.StatusInternalServerError)
 			}
 			if locus.VerboseLogging {
 				d, _ = httputil.DumpRequestOut(proxyreq, false)
@@ -177,15 +175,15 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 
 		locus.alogf("locus[%s] %d %s %s => %s (%s \"%s\") %s",
-			c.Name, status, req.Method, req.URL, proxyreq.URL, req.RemoteAddr,
+			c.Name, rrw.Status(), req.Method, req.URL, proxyreq.URL, req.RemoteAddr,
 			req.Header.Get("User-Agent"), string(d))
 
 	} else if req.URL.Path == "/debug/configs" {
 		tmpl.ConfigsTemplate.Execute(rw, locus)
-		locus.logDefaultReq(http.StatusOK, req)
+		locus.logDefaultReq(rrw, req)
 	} else {
-		rw.WriteHeader(http.StatusNotImplemented)
-		locus.logDefaultReq(http.StatusNotImplemented, req)
+		rrw.WriteHeader(http.StatusNotImplemented)
+		locus.logDefaultReq(rrw, req)
 	}
 }
 
@@ -201,9 +199,9 @@ func (locus *Locus) maybeApplyHostOverride(req *http.Request) {
 	}
 }
 
-func (locus *Locus) logDefaultReq(status int, req *http.Request) {
-	locus.alogf("locus[-] %d %s %s (%s \"%s\")",
-		status, req.Method, req.URL, req.RemoteAddr, req.Header.Get("User-Agent"))
+func (locus *Locus) logDefaultReq(rw *recordingResponseWriter, req *http.Request) {
+	locus.alogf("locus[-] %d %s %s (%s \"%s\")", rw.Status(), req.Method, req.URL,
+		req.RemoteAddr, req.Header.Get("User-Agent"))
 }
 
 func (locus *Locus) findConfig(req *http.Request) *Config {
