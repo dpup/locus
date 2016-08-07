@@ -1,10 +1,8 @@
 
 Needed to replace NGINX for my personal sites:
+- Gracefully handle downstream errors.
 - Upstream retry settings.
 - Upstream failover settings.
-- Gracefully handle downstream errors.
-- Support multiple hosts.
-- Simple redirect support.
 
 Needed to replace ELBs in-front of ECS services:
 - ECS upstream provider, use AWS SDK
@@ -16,9 +14,10 @@ Needed to replace ELBs in-front of ECS services:
 Nice to haves:
 - Consider using DNS for all types of upstreams, instead of decoupling.
 - Plug-in customizable Transport
+- For locus_host, consider rewriting URLs or setting a cookie so pages actually function.
 - Allow response transformations.
 - Add leastconn upsteam selection option
 - Healthcheck on upstreams
 - Extend Bind / RequestMatcher, to allow binding based on headers and other features
 - Debug page shows connections, failures, etc.
-- For locus_host, consider rewriting URLs or setting a cookie so pages actually function.
+- Convenience for multiple host aliases.
