@@ -1,6 +1,5 @@
 
 Needed to replace NGINX for my personal sites:
-- Gracefully handle downstream errors.
 - Upstream retry settings.
 - Upstream failover settings.
 
@@ -22,6 +21,8 @@ Nice to haves:
 - Debug page shows connections, failures, etc.
 - Convenience for multiple host aliases.
 
-Cleanup:
-- Move Transform and Matches out of Config
-- Break up Config into matcher, proxier, transformer?
+- Handle erors from Go standard libs:
+    - URI length
+    - Header length
+    - Timeouts
+    - see https://github.com/golang/go/issues/15034

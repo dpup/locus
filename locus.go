@@ -153,7 +153,7 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 		if err != nil { // TODO: Render local error page.
 			locus.elogf("error transforming request: %v", err)
-			rrw.WriteHeader(http.StatusInternalServerError)
+			locus.renderError(rrw, http.StatusInternalServerError)
 			locus.logDefaultReq(rrw, req)
 			return
 		}
@@ -167,7 +167,7 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		} else {
 			if err := locus.proxy.Proxy(rrw, proxyreq); err != nil { // TODO: Render local error page.
 				locus.elogf("error proxying request: %v", err)
-				rrw.WriteHeader(http.StatusInternalServerError)
+				locus.renderError(rrw, http.StatusBadGateway)
 			}
 			if locus.VerboseLogging {
 				d, _ = httputil.DumpRequestOut(proxyreq, false)
@@ -181,8 +181,9 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	} else if req.URL.Path == "/debug/configs" {
 		tmpl.ConfigsTemplate.Execute(rw, locus)
 		locus.logDefaultReq(rrw, req)
+
 	} else {
-		rrw.WriteHeader(http.StatusNotImplemented)
+		locus.renderError(rrw, http.StatusNotImplemented)
 		locus.logDefaultReq(rrw, req)
 	}
 }
@@ -206,6 +207,13 @@ func (locus *Locus) findConfig(req *http.Request) *Config {
 		}
 	}
 	return nil
+}
+
+func (locus *Locus) renderError(rw http.ResponseWriter, status int) {
+	rw.WriteHeader(status)
+	tmpl.ErrorTemplate.Execute(rw, struct {
+		Status int
+	}{status})
 }
 
 func (locus *Locus) logDefaultReq(rw *recordingResponseWriter, req *http.Request) {
