@@ -1,3 +1,4 @@
+// Package locus provides a multi-host reverse proxy.
 package locus
 
 import (
