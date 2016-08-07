@@ -76,7 +76,7 @@ Site:
 </tr>
 <tr>
 <td>binding:</td>
-<td>{{.RequestMatcher}}</td>
+<td>{{.Matcher}}</td>
 </tr>
 <tr>
 <td>upstream:</td>
@@ -102,4 +102,3 @@ Site:
 </body>
 </html>
 `)
-

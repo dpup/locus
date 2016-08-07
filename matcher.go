@@ -6,25 +6,11 @@ import (
 	"strings"
 )
 
-// The RequestMatcher interface is used to determine if a config matches an
-// incoming request.
-type RequestMatcher interface {
+// The Matcher interface is used to determine if a config matches an incoming
+// request.
+type Matcher interface {
 	Matches(req *http.Request) bool
 }
-
-// RequestMatcherFn is an adaptor to allow a function to expose the
-// RequestMatcher interface.
-type RequestMatcherFn func(req *http.Request) bool
-
-// Matches calls the function and returns the result.
-func (fn RequestMatcherFn) Matches(req *http.Request) bool {
-	return fn(req)
-}
-
-// MatchAll implements RequestMatcher interface and matches all requests.
-var MatchAll = RequestMatcherFn(func(req *http.Request) bool {
-	return true
-})
 
 type urlMatcher struct {
 	url          *url.URL

@@ -18,6 +18,10 @@ Nice to haves:
 - Allow response transformations.
 - Add leastconn upsteam selection option
 - Healthcheck on upstreams
-- Extend Bind / RequestMatcher, to allow binding based on headers and other features
+- Extend Bind / Matcher, to allow binding based on headers and other features
 - Debug page shows connections, failures, etc.
 - Convenience for multiple host aliases.
+
+Cleanup:
+- Move Transform and Matches out of Config
+- Break up Config into matcher, proxier, transformer?

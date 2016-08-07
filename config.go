@@ -6,8 +6,11 @@ import (
 	"strings"
 )
 
-// Config specifies how to handle an incoming request.
+// Config specifies what requests to handle, how to forward the request, and how
+// to transform the response.
 type Config struct {
+	Matcher
+
 	// User visible name for the config, used in debug pages and logs.
 	Name string
 
@@ -15,10 +18,6 @@ type Config struct {
 	// upstream specifies a path in its URL. When using Config.Match it is set to
 	// the path provided in the URL string.
 	PathPrefix string
-
-	// RequestMatcher is used to determine whether a config matches an incoming
-	// request and should be used to configure the proxied request.
-	RequestMatcher RequestMatcher
 
 	// UpstreamProvider is used to fetch a list of candidate upstreams to proxy
 	// the request to.
@@ -46,7 +45,7 @@ type Config struct {
 // If the upstream path is empty, the path is left unaltered. If the upststream
 // path is non empty, e.g. '/' or '/some/prefix/', then the proxied request's
 // path is set to the upstream path joined with a trimmed request path. For
-// default RequestMatcher the required path prefix is stripped from the proxied
+// default Matcher the required path prefix is stripped from the proxied
 // request.
 //
 // Examples 1: Pathless upstream proxies entire request path.
@@ -109,24 +108,19 @@ func (c *Config) Transform(req *http.Request) error {
 	return nil
 }
 
-// Matches returns true if this config can be used for the provided request.
-func (c *Config) Matches(req *http.Request) bool {
-	return c.RequestMatcher.Matches(req)
-}
-
 // Bind configures this config to target the provided URL.
 //
 // If present, Scheme, Host, Port will be exact matches, Path is prefix matched.
 // Query params are exact match, but not exclusive. Ports 80 and 443 are implied
 // if a scheme is present without explicit port. A URL with a host and no schemeor port will match all ports.
 //
-// See RequestMatcher_test.go for examples.
+// See Matcher_test.go for examples.
 func (c *Config) Bind(urlStr string) error {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return err
 	}
-	c.RequestMatcher = &urlMatcher{url: u}
+	c.Matcher = &urlMatcher{url: u}
 	c.PathPrefix = u.Path
 	return nil
 }
