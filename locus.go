@@ -149,6 +149,8 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	c := locus.findConfig(req)
 	if c != nil {
+		status := http.StatusOK // TODO: extract status code from rw.
+
 		// Found matching config so copy req, transform it, and forward it.
 		proxyreq := copyRequest(req)
 
@@ -159,18 +161,25 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		status := http.StatusOK // TODO: extract status code from rw.
-
-		if err := locus.proxy.Proxy(rw, proxyreq); err != nil { // TODO: Render local error page.
-			locus.elogf("error proxying request: %v", err)
-			rw.WriteHeader(http.StatusInternalServerError)
-			status = http.StatusInternalServerError
-		}
-
 		var d []byte
-		if locus.VerboseLogging {
-			d, _ = httputil.DumpRequestOut(proxyreq, false)
+
+		if c.Redirect != 0 {
+			status = c.Redirect
+			proxyreq.URL.Query().Del(HostOverrideParam) // Avoid infinite loops.
+			rw.Header().Add("Location", proxyreq.URL.String())
+			rw.WriteHeader(c.Redirect)
+
+		} else {
+			if err := locus.proxy.Proxy(rw, proxyreq); err != nil { // TODO: Render local error page.
+				locus.elogf("error proxying request: %v", err)
+				rw.WriteHeader(http.StatusInternalServerError)
+				status = http.StatusInternalServerError
+			}
+			if locus.VerboseLogging {
+				d, _ = httputil.DumpRequestOut(proxyreq, false)
+			}
 		}
+
 		locus.alogf("locus[%s] %d %s %s => %s (%s \"%s\") %s",
 			c.Name, status, req.Method, req.URL, proxyreq.URL, req.RemoteAddr,
 			req.Header.Get("User-Agent"), string(d))

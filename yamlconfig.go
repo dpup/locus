@@ -3,6 +3,7 @@ package locus
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -46,13 +47,19 @@ sites:
   # handles all other requests to mysite.com. A single upstream without a scheme
   # demarks a DNS upstream.
   - name: fallthrough
-    match: http://www.mysite.com/
+    match: http://mysite.com/
     upstream: dns.test.fake
     upstream_port: 4000
     upstream_path: /2016/mysite/
     ttl: 5m
     allow_stale: true
     round_robin: true
+  # 'redirect' will redirect any non-matched subdomains to the fallthrough route
+  # above.
+  - name: redirect
+    match: http://*.mysite.com
+    upstream: http://mysite.com
+    redirect: 301
 `
 
 type globalSettings struct {
@@ -77,6 +84,7 @@ type yamlSiteConfig struct {
 	AddHeaders   map[string]string `yaml:"add_header"`
 	SetHeaders   map[string]string `yaml:"set_header"`
 	StripHeaders []string          `yaml:"strip_header"`
+	Redirect     int               `yaml:"redirect"`
 }
 
 type yamlConfig struct {
@@ -142,6 +150,16 @@ func siteFromYAML(site yamlSiteConfig, cfg *Config) error {
 
 	for _, key := range site.StripHeaders {
 		cfg.StripHeader(key)
+	}
+
+	if site.Redirect != 0 {
+		switch site.Redirect {
+		case http.StatusMovedPermanently, http.StatusFound, http.StatusTemporaryRedirect:
+			cfg.Redirect = site.Redirect
+		default:
+			return fmt.Errorf("invalid redirect, should be one of (%d, %d, %d), was '%d'",
+				http.StatusMovedPermanently, http.StatusFound, http.StatusTemporaryRedirect, site.Redirect)
+		}
 	}
 
 	return nil

@@ -1,6 +1,7 @@
 package locus
 
 import (
+	"net/http"
 	"net/url"
 	"reflect"
 	"testing"
@@ -29,6 +30,7 @@ func TestLoadConfig(t *testing.T) {
 	about := cfgs[0]
 	search := cfgs[1]
 	fallthru := cfgs[2]
+	redirect := cfgs[3]
 
 	// Verify the first site has a single URL upstream.
 	actual1, err := about.UpstreamProvider.All()
@@ -90,5 +92,9 @@ func TestLoadConfig(t *testing.T) {
 	expected := []string{"Cookie", "User-Agent"}
 	if !reflect.DeepEqual(about.stripHeaders, expected) {
 		t.Errorf("Unexpected strip header, wanted %v was '%v'", expected, about.stripHeaders)
+	}
+
+	if redirect.Redirect != http.StatusMovedPermanently {
+		t.Errorf("Unexpected redirect, wanted %d was %d", http.StatusMovedPermanently, redirect.Redirect)
 	}
 }

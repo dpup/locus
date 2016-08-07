@@ -65,7 +65,14 @@ font-size: 20px;
 </tr>
 {{range .Configs}}
 <tr>
-<td colspan="2">Site: {{.Name}}</td>
+<td colspan="2">
+{{if .Redirect}}
+Redirect:
+{{else}}
+Site:
+{{end}}
+{{.Name}}
+</td>
 </tr>
 <tr>
 <td>binding:</td>
@@ -82,6 +89,12 @@ font-size: 20px;
 <tr>
 <td>upstream {{$k}}:</td>
 <td>{{$v}}</td>
+</tr>
+{{end}}
+{{if .Redirect}}
+<tr>
+<td>redirect</td>
+<td>{{.Redirect}}</td>
 </tr>
 {{end}}
 {{end}}

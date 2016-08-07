@@ -24,6 +24,10 @@ type Config struct {
 	// the request to.
 	UpstreamProvider UpstreamProvider
 
+	// Redirect specfied a HTTP status code that should be issued along with a
+	// Location header. Should one of be 301, 302, 307.
+	Redirect int
+
 	stripHeaders []string
 	setHeaders   map[string]string
 	addHeaders   map[string][]string

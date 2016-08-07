@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/dpup/locus"
+	"net/http"
 )
 
 func main() {
@@ -34,6 +35,12 @@ func main() {
 	amazon.Upstream(locus.DNS("amazon.com", 80, "/404")) // Force a 404 to avoid canonical redirects in demo.
 	amazon.StripHeader("Cookie")
 	amazon.SetHeader("Host", "www.amazon.com")
+
+	// open http://localhost:5555/goog/search?q=wunderbar
+	goog := proxy.NewConfig()
+	goog.Bind("/goog")
+	goog.Upstream(locus.Single("http://www.google.com/"))
+	goog.Redirect = http.StatusFound
 
 	panic(proxy.ListenAndServe())
 }
