@@ -23,7 +23,7 @@ func TestUrlMatcher(t *testing.T) {
 		{"//test.com", "www.test.com", false},
 
 		// Wildcard host binding.
-		{"http://*.test.com", "http://test.com", false},
+		{"http://*.test.com", "http://test.com", false}, // Should this be true?
 		{"http://*.test.com", "http://www.test.com", true},
 		{"http://*.test.com", "http://about.test.com", true},
 		{"http://*.test.com", "http://one.two.three.test.com", true},

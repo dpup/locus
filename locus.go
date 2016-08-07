@@ -7,16 +7,15 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
-	"net/url"
 	"time"
 
 	"github.com/dpup/locus/tmpl"
 )
 
-// OverrideQueryParam param that when specified in the URL overrides the request
-// in the URL.
-// e.g. http://localhost:5555/?locus_override=http://sample.locus.xyz
-const OverrideQueryParam = "locus_override"
+// HostOverrideParam param that when specified in the querystring overrides the
+// host in the requested URL. Intended for testing staged sites.
+// e.g. http://localhost:5555/?locus_host=sample.locus.xyz
+const HostOverrideParam = "locus_host"
 
 // Locus wraps a fork of golang's httputil.ReverseProxy to provide multi-host
 // routing.
@@ -143,14 +142,9 @@ func (locus *Locus) ListenAndServe() error {
 }
 
 func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	overrideParam := req.URL.Query().Get(OverrideQueryParam)
+	overrideParam := req.URL.Query().Get(HostOverrideParam)
 	if overrideParam != "" {
-		overrideURL, err := url.Parse(overrideParam)
-		if err != nil {
-			locus.elogf("error parsing override URL, ignoring: ", err)
-		} else {
-			req.URL = overrideURL
-		}
+		req.URL.Host = overrideParam
 	}
 
 	c := locus.findConfig(req)
