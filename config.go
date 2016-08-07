@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// Config is...
+// Config specifies how to handle an incoming request.
 type Config struct {
-	// User defined name for the config.
+	// User visible name for the config, used in debug pages and logs.
 	Name string
 
 	// PathPrefix will be stripped from the incoming request path, iff the

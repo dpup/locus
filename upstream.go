@@ -157,6 +157,7 @@ type DNSSet struct {
 	mu        sync.Mutex
 }
 
+// DebugInfo returns extra fields to show on /debug/configs
 func (ds *DNSSet) DebugInfo() map[string]string {
 	m := map[string]string{}
 	if ds.err != nil {

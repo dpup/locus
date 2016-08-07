@@ -87,7 +87,7 @@ func (c *runOnFirstRead) Read(bs []byte) (int, error) {
 func (p *reverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	err := p.Proxy(rw, req)
 	if err != nil {
-		log.Printf("proxy error:", err)
+		log.Printf("proxy error: %v", err)
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 }
