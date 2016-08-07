@@ -13,8 +13,8 @@ var conf = flag.String("conf", "/etc/locus.conf", "Location of config file.")
 func main() {
 	flag.Parse()
 
-	proxy := locus.New()
-	if err := proxy.LoadConfigFile(*conf); err != nil {
+	proxy, err := locus.FromConfigFile(*conf)
+	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}

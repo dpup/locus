@@ -62,6 +62,58 @@ func New() *Locus {
 	}
 }
 
+// FromConfig creates a new locus server from YAML config.
+// See SampleYAMLConfig.
+func FromConfig(data []byte) (*Locus, error) {
+	cfgs, globals, err := loadConfigFromYAML(data)
+	if err != nil {
+		return nil, err
+	}
+
+	locus := New()
+
+	if globals.Port != 0 {
+		locus.Port = globals.Port
+	}
+	if globals.ReadTimeout != 0 {
+		locus.ReadTimeout = globals.ReadTimeout
+	}
+	if globals.WriteTimeout != 0 {
+		locus.WriteTimeout = globals.WriteTimeout
+	}
+
+	locus.VerboseLogging = globals.VerboseLogging
+
+	if globals.AccessLog != "" {
+		locus.AccessLog, err = newLogger(globals.AccessLog)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if globals.ErrorLog != "" {
+		locus.ErrorLog, err = newLogger(globals.ErrorLog)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, cfg := range cfgs {
+		locus.AddConfig(cfg)
+	}
+
+	return locus, nil
+}
+
+// FromConfigFile creates a new locus server from a YAML config file.
+func FromConfigFile(filename string) (*Locus, error) {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	return FromConfig(data)
+}
+
 // NewConfig creates an empty config, registers it, then returns it.
 func (locus *Locus) NewConfig() *Config {
 	cfg := &Config{Name: fmt.Sprintf("cfg%d", len(locus.Configs))}
@@ -74,37 +126,6 @@ func (locus *Locus) NewConfig() *Config {
 // request.
 func (locus *Locus) AddConfig(cfg *Config) {
 	locus.Configs = append(locus.Configs, cfg)
-}
-
-// LoadConfig adds site configs stored as YAML. See SampleYAMLConfig.
-func (locus *Locus) LoadConfig(data []byte) error {
-	cfgs, globals, err := loadConfigFromYAML(data)
-	if err != nil {
-		return err
-	}
-	if globals.Port != 0 {
-		locus.Port = globals.Port
-	}
-	if globals.ReadTimeout != 0 {
-		locus.ReadTimeout = globals.ReadTimeout
-	}
-	if globals.WriteTimeout != 0 {
-		locus.WriteTimeout = globals.WriteTimeout
-	}
-	locus.VerboseLogging = globals.VerboseLogging
-	for _, cfg := range cfgs {
-		locus.AddConfig(cfg)
-	}
-	return nil
-}
-
-// LoadConfigFile reads configs from a YAML file.
-func (locus *Locus) LoadConfigFile(filename string) error {
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return err
-	}
-	return locus.LoadConfig(data)
 }
 
 // ListenAndServe listens on locus.Port for incoming connections.
@@ -139,26 +160,38 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		if err := c.Transform(proxyreq); err != nil { // TODO: Render local error page.
 			locus.elogf("error transforming request: %v", err)
 			rw.WriteHeader(http.StatusInternalServerError)
+			locus.logDefaultReq(http.StatusInternalServerError, req)
 			return
 		}
+
+		status := http.StatusOK // TODO: extract status code from rw.
 
 		if err := locus.proxy.Proxy(rw, proxyreq); err != nil { // TODO: Render local error page.
 			locus.elogf("error proxying request: %v", err)
 			rw.WriteHeader(http.StatusInternalServerError)
-			return
+			status = http.StatusInternalServerError
 		}
 
+		var d []byte
 		if locus.VerboseLogging {
-			d, _ := httputil.DumpRequestOut(proxyreq, false)
-			locus.alogf("locus[%s] %s %s://%s %s", c.Name, proxyreq.RemoteAddr, proxyreq.URL.Scheme, proxyreq.URL.Host, string(d))
-		} else {
-			locus.alogf("locus[%s] %s %s %s://%s%s", c.Name, proxyreq.RemoteAddr, proxyreq.Method, proxyreq.URL.Scheme, proxyreq.URL.Host, proxyreq.URL.Path)
+			d, _ = httputil.DumpRequestOut(proxyreq, false)
 		}
+		locus.alogf("locus[%s] %d %s %s => %s (%s \"%s\") %s",
+			c.Name, status, req.Method, req.URL, proxyreq.URL, req.RemoteAddr,
+			req.Header.Get("User-Agent"), string(d))
+
 	} else if req.URL.Path == "/debug/configs" {
 		tmpl.DebugTemplate.ExecuteTemplate(rw, "configs", locus)
+		locus.logDefaultReq(http.StatusOK, req)
 	} else {
 		rw.WriteHeader(http.StatusNotImplemented)
+		locus.logDefaultReq(http.StatusNotImplemented, req)
 	}
+}
+
+func (locus *Locus) logDefaultReq(status int, req *http.Request) {
+	locus.alogf("locus[-] %d %s %s (%s \"%s\")",
+		status, req.Method, req.URL, req.RemoteAddr, req.Header.Get("User-Agent"))
 }
 
 func (locus *Locus) findConfig(req *http.Request) *Config {

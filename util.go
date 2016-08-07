@@ -1,13 +1,20 @@
 package locus
 
 import (
+	"fmt"
+	"io"
+	"log"
 	"net/http"
+	"net/url"
+	"os"
 	"strings"
 )
 
 func copyRequest(req *http.Request) *http.Request {
 	cr := new(http.Request)
 	*cr = *req
+	cr.URL = &url.URL{}
+	*cr.URL = *req.URL
 	cr.Header = make(http.Header)
 	copyHeader(cr.Header, req.Header)
 	return cr
@@ -33,4 +40,12 @@ func singleJoiningSlash(a, b string) string {
 		return a + "/" + b
 	}
 	return a + b
+}
+
+func newLogger(filename string) (*log.Logger, error) {
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create logger: %v", err)
+	}
+	return log.New(io.MultiWriter(os.Stderr, file), "", log.Ldate|log.Ltime), nil
 }
