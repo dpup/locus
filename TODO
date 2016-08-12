@@ -12,7 +12,7 @@ Needed to replace ELBs in-front of ECS services:
 
 Nice to haves:
 - Consider using DNS for all types of upstreams, instead of decoupling.
-- Plug-in customizable Transport
+- Plug-in customizable Transport in reverseProxy
 - For locus_host, consider rewriting URLs or setting a cookie so pages actually function.
 - Allow response transformations.
 - Add leastconn upsteam selection option
