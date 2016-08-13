@@ -30,7 +30,8 @@ color: rgb(255, 255, 255);
 <body>
 <h1>
 {{.Status}}
-{{if eq .Status 400}}Bad Request
+{{if eq .Status 200}}OK
+{{else if eq .Status 400}}Bad Request
 {{else if eq .Status 401}}Unauthorized
 {{else if eq .Status 402}}Payment Required
 {{else if eq .Status 403}}Forbidden

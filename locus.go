@@ -182,8 +182,13 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		tmpl.ConfigsTemplate.Execute(rw, locus)
 		locus.logDefaultReq(rrw, req)
 
+		// For legacy healthchecking, render 200 on root path.
+	} else if req.URL.Path == "/" {
+		locus.renderError(rrw, http.StatusOK)
+		locus.logDefaultReq(rrw, req)
+
 	} else {
-		locus.renderError(rrw, http.StatusNotImplemented)
+		locus.renderError(rrw, http.StatusNotFound)
 		locus.logDefaultReq(rrw, req)
 	}
 }

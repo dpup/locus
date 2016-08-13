@@ -41,7 +41,7 @@ width: 200px;
 }
 
 td[colspan="2"] {
-padding: 2rem 0.5rem 0.2rem;
+padding: 2rem 0.2rem 0.2rem;
 border-bottom: 0.3rem solid rgb(50, 50, 50);
 font-weight: bold;
 font-size: 1.2rem;
