@@ -1,7 +1,4 @@
 
-Needed to replace NGINX for my personal sites:
-- Upstream retry settings.
-- Upstream failover settings.
 
 Needed to replace ELBs in-front of ECS services:
 - ECS upstream provider, use AWS SDK
@@ -25,4 +22,3 @@ Nice to haves:
     - Timeouts
     - see https://github.com/golang/go/issues/15034
 - Plug-in customizable Transport in reverseProxy
-- Make Matcher.String() nicer for partial matches

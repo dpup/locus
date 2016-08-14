@@ -71,12 +71,20 @@ func (um *Matcher) BindLocation(requestURI string) (string, url.Values) {
 }
 
 func (um Matcher) String() string {
-	u := url.URL{
-		Host:     um.host + ":" + um.port,
-		Path:     um.path,
-		RawQuery: um.query.Encode(),
+	str := ""
+	if um.host != "" {
+		str += um.host
 	}
-	return u.String()
+	if um.port != "" {
+		str += ":" + um.port
+	}
+	if um.path != "" {
+		str += um.path
+	}
+	if um.hasQuery {
+		str += um.query.Encode()
+	}
+	return str
 }
 
 // Match returns true if an inbound request satisfies all the requirements of
