@@ -25,3 +25,4 @@ Nice to haves:
     - Timeouts
     - see https://github.com/golang/go/issues/15034
 - Plug-in customizable Transport in reverseProxy
+- Make Matcher.String() nicer for partial matches

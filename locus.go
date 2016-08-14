@@ -195,7 +195,7 @@ func (locus *Locus) maybeApplyHostOverride(req *http.Request) {
 	q := req.URL.Query()
 	overrideParam := q.Get(HostOverrideParam)
 	if overrideParam != "" {
-		req.URL.Host = overrideParam
+		req.Host = overrideParam
 
 		// Avoid infinite loops.
 		q.Del(HostOverrideParam)
