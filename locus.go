@@ -172,7 +172,7 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			d = locus.maybeDumpRequest(req)
 		}
 
-		locus.alogf("locus[%s] %d %s %s => %s (%s \"%s\") %s",
+		locus.alogf("locus[%s] %d %s %s => %s (%s %q) %s",
 			c.Name, rrw.Status(), req.Method, req.URL, proxyreq.URL, req.RemoteAddr,
 			req.Header.Get("User-Agent"), string(d))
 
@@ -220,7 +220,7 @@ func (locus *Locus) renderError(rw http.ResponseWriter, status int) {
 }
 
 func (locus *Locus) logDefaultReq(rw *recordingResponseWriter, req *http.Request) {
-	locus.alogf("locus[-] %d %s %s (%s \"%s\") %s", rw.Status(), req.Method, req.URL,
+	locus.alogf("locus[-] %d %s %s (%s %q) %s", rw.Status(), req.Method, req.URL,
 		req.RemoteAddr, req.Header.Get("User-Agent"), locus.maybeDumpRequest(req))
 }
 
