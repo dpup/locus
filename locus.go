@@ -158,7 +158,7 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		var d []byte
+		var d string
 
 		if c.Redirect != 0 {
 			rrw.Header().Add("Location", proxyreq.URL.String())
@@ -169,9 +169,7 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 				locus.elogf("error proxying request: %v", err)
 				locus.renderError(rrw, http.StatusBadGateway)
 			}
-			if locus.VerboseLogging {
-				d, _ = httputil.DumpRequestOut(proxyreq, false)
-			}
+			d = locus.maybeDumpRequest(req)
 		}
 
 		locus.alogf("locus[%s] %d %s %s => %s (%s \"%s\") %s",
@@ -222,8 +220,19 @@ func (locus *Locus) renderError(rw http.ResponseWriter, status int) {
 }
 
 func (locus *Locus) logDefaultReq(rw *recordingResponseWriter, req *http.Request) {
-	locus.alogf("locus[-] %d %s %s (%s \"%s\")", rw.Status(), req.Method, req.URL,
-		req.RemoteAddr, req.Header.Get("User-Agent"))
+	locus.alogf("locus[-] %d %s %s (%s \"%s\") %s", rw.Status(), req.Method, req.URL,
+		req.RemoteAddr, req.Header.Get("User-Agent"), locus.maybeDumpRequest(req))
+}
+
+func (locus *Locus) maybeDumpRequest(req *http.Request) string {
+	if locus.VerboseLogging {
+		d, err := httputil.DumpRequest(req, false)
+		if err == nil {
+			return string(d)
+		}
+		locus.elogf("failed to dump request: %v", err)
+	}
+	return ""
 }
 
 func (locus *Locus) alogf(format string, args ...interface{}) {
