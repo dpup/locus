@@ -11,18 +11,17 @@ Needed to replace ELBs in-front of ECS services:
     - How to minimize downtime due to changes? Update on error?
 
 Nice to haves:
-- Consider using DNS for all types of upstreams, instead of decoupling.
-- Plug-in customizable Transport in reverseProxy
-- For locus_host, consider rewriting URLs or setting a cookie so pages actually function.
-- Allow response transformations.
-- Add leastconn upsteam selection option
 - Healthcheck on upstreams
-- Extend Bind / Matcher, to allow binding based on headers and other features
 - Debug page shows connections, failures, etc.
+- Extend Bind / Matcher, to allow binding based on headers and other features
+- Consider using DNS for all types of upstreams, instead of decoupling.
+- Allow response transformations.
+- For locus_host, consider rewriting URLs or setting a cookie so pages actually function.
+- Add leastconn upsteam selection option
 - Convenience for multiple host aliases.
-
-- Handle erors from Go standard libs:
+- Nice error pages from Go standard libs:
     - URI length
     - Header length
     - Timeouts
     - see https://github.com/golang/go/issues/15034
+- Plug-in customizable Transport in reverseProxy

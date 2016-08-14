@@ -6,88 +6,104 @@ import (
 
 func TestUrlMatcher(t *testing.T) {
 	var urlTests = []struct {
-		matchurl string
-		requrl   string
-		expected bool
+		matchHost string
+		matchPath string
+		requrl    string
+		expected  bool
 	}{
 		// Host only binding.
-		{"//test.com", "//test.com", true},
-		{"//test.com", "http://test.com", true},
-		{"//test.com", "https://test.com", true},
-		{"//test.com", "ftp://test.com", true},
-		{"//test.com", "http://test.com:5000", true},
-		{"//test.com", "http://test.com/foobar", true},
-		{"//test.com", "http://test.com/foobar/bazbar", true},
-		{"//test.com", "https://test.com/foobar", true},
-		{"//test.com", "https://www.test.com", false},
-		{"//test.com", "www.test.com", false},
+		{"test.com", "", "//test.com", true},
+		{"test.com", "", "http://test.com", true},
+		{"test.com", "", "https://test.com", true},
+		{"test.com", "", "ftp://test.com", true},
+		{"test.com", "", "http://test.com:5000", true},
+		{"test.com", "", "http://test.com/foobar", true},
+		{"test.com", "", "http://test.com/foobar/bazbar", true},
+		{"test.com", "", "https://test.com/foobar", true},
+		{"test.com", "", "https://www.test.com", false},
+		{"test.com", "", "www.test.com", false},
 
 		// Wildcard host binding.
-		{"http://*.test.com", "http://test.com", false}, // Should this be true?
-		{"http://*.test.com", "http://notmytest.com", false},
-		{"http://*.test.com", "http://www.test.com", true},
-		{"http://*.test.com", "http://about.test.com", true},
-		{"http://*.test.com", "http://one.two.three.test.com", true},
-		{"http://www.*.test.com", "http://www.three.test.com", false},
-
-		// Host and scheme binding (implies port).
-		{"http://test.com", "http://test.com/foo", true},
-		{"http://test.com", "https://test.com/foo", false},
+		{".test.com", "", "http://test.com", false}, // Should this be true?
+		{".test.com", "", "http://notmytest.com", false},
+		{".test.com", "", "http://www.test.com", true},
+		{".test.com", "", "http://about.test.com", true},
+		{".test.com", "", "http://one.two.three.test.com", true},
 
 		// Full host and port binding.
-		{"http://test.com:5000", "http://test.com/foo", false},
-		{"http://test.com:5000", "http://test.com:5000/foo", true},
+		{"test.com:5000", "", "http://test.com/foo", false},
+		{"test.com:5000", "", "http://test.com:5000/foo", true},
 
 		// Host and path binding.
-		{"http://test.com/foo", "http://test.com/foo", true},
-		{"http://test.com/foo", "http://test.com/foo/", true},
-		{"http://test.com/foo", "http://test.com/foo/bar", true},
-		{"http://test.com/foo", "http://test.com/baz", false},
+		{"test.com", "/foo", "http://test.com/foo", true},
+		{"test.com", "/foo", "http://test.com/foo/", true},
+		{"test.com", "/foo", "http://test.com/foo/bar", true},
+		{"test.com", "/foo", "http://test.com/baz", false},
 
 		// Path only binding.
-		{"/foo", "http://test.com/foo", true},
-		{"/foo", "http://google.com/foo/bar", true},
-		{"/foo", "http://google.com/baz/foo/bar", false},
+		{"", "/foo", "http://test.com/foo", true},
+		{"", "/foo", "http://google.com/foo/bar", true},
+		{"", "/foo", "http://google.com/baz/foo/bar", false},
 
 		// Port only binding.
-		{"//:5000", "http://test.com:5000/foo", true},
-		{"//:5000", "https://google.com:5000/foo/bar", true},
-		{"//:5000", "http://google.com/baz/foo/bar", false},
+		{":5000", "", "http://test.com:5000/foo", true},
+		{":5000", "", "https://google.com:5000/foo/bar", true},
+		{":5000", "", "http://google.com/baz/foo/bar", false},
 
 		// Port 80 is implied for HTTP.
-		{"http://test.com", "http://test.com:80/foo", true},
-		{"http://test.com:80", "http://test.com/foo", true},
-		{"http://test.com:80", "http://test.com:80/foo", true},
-		{"http://test.com:80", "http://test.com:5000/foo", false},
+		{"test.com", "", "http://test.com:80/foo", true},
+		{"test.com:80", "", "http://test.com/foo", true},
+		{"test.com:80", "", "http://test.com:80/foo", true},
+		{"test.com:80", "", "http://test.com:5000/foo", false},
 
 		// Port 443 is implied for HTTPS.
-		{"https://test.com:443", "https://test.com/foo", true},
-		{"https://test.com:443", "https://test.com:443/foo", true},
-		{"https://test.com:443", "http://test.com/foo", false},
-		{"https://test.com:443", "http://test.com:443/foo", false},
-		{"https://test.com:443", "https://test.com:5000/foo", false},
+		{"test.com:443", "", "https://test.com/foo", true},
+		{"test.com:443", "", "https://test.com:443/foo", true},
+		{"test.com:443", "", "http://test.com:443/foo", true},
+		{"test.com:443", "", "http://test.com/foo", false},
+		{"test.com:443", "", "https://test.com:5000/foo", false},
 
 		// Query param binding.
-		{"?staging=true", "http://test.com/?staging=true", true},
-		{"?staging=true", "http://test.com/?staging=true&debug=true", true},
-		{"?staging=true", "http://test.com/?staging=false", false},
-		{"?staging=true", "http://test.com/?staging=false&staging=true", false},
-		{"?staging=true", "http://test.com/?staging=1", false},
-		{"?staging=true", "http://test.com/", false},
-		{"?lang=en&country=us", "http://test.com/?lang=en&country=us", true},
-		{"?lang=en&country=us", "http://test.com/?country=us&lang=en", true},
-		{"?lang=en&country=us", "http://test.com/?lang=en", false},
-		{"?lang=en&country=us", "http://test.com/?country=us", false},
+		{"", "?staging=true", "http://test.com/?staging=true", true},
+		{"", "?staging=true", "http://test.com/?staging=true&debug=true", true},
+		{"", "?staging=true", "http://test.com/?staging=false", false},
+		{"", "?staging=true", "http://test.com/?staging=false&staging=true", false},
+		{"", "?staging=true", "http://test.com/?staging=1", false},
+		{"", "?staging=true", "http://test.com/", false},
+		{"", "?lang=en&country=us", "http://test.com/?lang=en&country=us", true},
+		{"", "?lang=en&country=us", "http://test.com/?country=us&lang=en", true},
+		{"", "?lang=en&country=us", "http://test.com/?lang=en", false},
+		{"", "?lang=en&country=us", "http://test.com/?country=us", false},
 
-		// URLs without '//' are hostless, test.com is actually the path.
-		{"//test.com", "test.com", false},
+		// Incoming URLs without '//' are hostless, test.com is actually the path.
+		{"test.com", "", "test.com", false},
 	}
 
 	for _, tt := range urlTests {
-		um := &urlMatcher{url: mustParseURL(tt.matchurl)}
-		actual, reason := um.MatchWithReason(mustParseURL(tt.requrl))
+		req := mustReq(tt.requrl)
+		um := NewMatcher(tt.matchHost, tt.matchPath)
+		actual, reason := um.Match(req)
 		if actual != tt.expected {
-			t.Errorf("matching '%s' against '%s' => %v, want %v (%s)", tt.requrl, tt.matchurl, actual, tt.expected, reason)
+			t.Errorf("matching '%s' against '%s' => %v, want %v (%s)", tt.requrl, um, actual, tt.expected, reason)
 		}
+	}
+}
+
+// Per RFC 2616, Section 5.1.2, most request URLs will only be path+query. The
+// above test uses fullformed URLs. This test briefly ensures the Host header
+// is used when the URL's host is empty.
+func TestHostless(t *testing.T) {
+	req := mustReq("http://www.test.com/foo/bar/baz")
+	req.URL.Host = ""
+	req.URL.Scheme = ""
+
+	um1 := NewMatcher("www.test.com", "/foo")
+	if ok, reason := um1.Match(req); !ok {
+		t.Errorf("Expected match, but got reason '%s'", reason)
+	}
+
+	um2 := NewMatcher("poop.test.com", "/foo/bar/baz")
+	if ok, _ := um2.Match(req); ok {
+		t.Errorf("Didn't expected a match")
 	}
 }

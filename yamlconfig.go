@@ -28,7 +28,7 @@ defaults:
 sites:
   # 'about_us' is a single upstream site that sets some cookies.
   - name: about_us
-    match: http://us.mysite.com/about
+    bind: //us.mysite.com/about
     upstream: http://about-1.mysite.com
     strip_header:
       - Cookie
@@ -37,7 +37,7 @@ sites:
       Accept-Language: en-US
   # 'search' is a site with multiple fixed upstreams.
   - name: search
-    match: http://www.mysite.com/search
+    bind: //www.mysite.com/search
     upstream_set:
       - http://search-1.mysite.com
       - http://search-2.mysite.com
@@ -47,7 +47,7 @@ sites:
   # handles all other requests to mysite.com. A single upstream without a scheme
   # demarks a DNS upstream.
   - name: fallthrough
-    match: http://mysite.com/
+    bind_host: mysite.com
     upstream: dns.test.fake
     upstream_port: 4000
     upstream_path: /2016/mysite/
@@ -57,7 +57,7 @@ sites:
   # 'redirect' will redirect any non-matched subdomains to the fallthrough route
   # above.
   - name: redirect
-    match: http://*.mysite.com
+    bind_host: .mysite.com
     upstream: http://mysite.com
     redirect: 301
 `
@@ -73,7 +73,9 @@ type globalSettings struct {
 
 type yamlSiteConfig struct {
 	Name         string            `yaml:"name"`
-	Match        string            `yaml:"match"`
+	Bind         string            `yaml:"bind"`
+	BindHost     string            `yaml:"bind_host"`
+	BindLocation string            `yaml:"bind_location"`
 	Upstream     string            `yaml:"upstream"`
 	UpstreamSet  []string          `yaml:"upstream_set"`
 	RoundRobin   bool              `yaml:"round_robin"`
@@ -127,9 +129,20 @@ func loadConfigFromYAML(data []byte) ([]*Config, *globalSettings, error) {
 func siteFromYAML(site yamlSiteConfig, cfg *Config) error {
 	cfg.Name = site.Name
 
-	err := cfg.Bind(site.Match)
-	if err != nil {
-		return err
+	if site.Bind != "" {
+		if site.BindHost != "" || site.BindLocation != "" {
+			return fmt.Errorf("'bind' can not be used with 'bind_host' or 'bind_location'")
+		}
+		err := cfg.Bind(site.Bind)
+		if err != nil {
+			return err
+		}
+	}
+	if site.BindHost != "" {
+		cfg.BindHost(site.BindHost)
+	}
+	if site.BindLocation != "" {
+		cfg.BindLocation(site.BindLocation)
 	}
 
 	up, err := upstreamFromYAML(site)

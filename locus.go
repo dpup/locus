@@ -205,7 +205,7 @@ func (locus *Locus) maybeApplyHostOverride(req *http.Request) {
 
 func (locus *Locus) findConfig(req *http.Request) *Config {
 	for _, c := range locus.Configs {
-		if c.Matches(req) {
+		if ok, _ := c.Match(req); ok {
 			return c
 		}
 	}

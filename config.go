@@ -21,11 +21,11 @@ type Config struct {
 	Redirect int
 }
 
-// Bind configures this config to target the provided URL.
+// Bind uses an URL to define the host:port/path?query components to match on.
 //
-// If present, Scheme, Host, Port will be exact matches, Path is prefix matched.
-// Query params are exact match, but not exclusive. Ports 80 and 443 are implied
-// if a scheme is present without explicit port. A URL with a host and no schemeor port will match all ports.
+// If present, Host and Port will be exact matches, Path is prefix matched.
+// Query params are exact match, but not exclusive. Scheme is ignored. A URL
+// with a host and no no port will match all ports.
 //
 // See Matcher_test.go for examples.
 func (c *Config) Bind(urlStr string) error {
@@ -33,9 +33,16 @@ func (c *Config) Bind(urlStr string) error {
 	if err != nil {
 		return err
 	}
-	c.Matcher = &urlMatcher{url: u}
-	c.PathPrefix = u.Path
+	c.BindHost(u.Host)
+	c.BindLocation(u.RequestURI())
 	return nil
+}
+
+// BindLocation sets the path and query (request URI) portion that should be
+// matched.
+func (c *Config) BindLocation(requestURI string) {
+	path, _ := c.Matcher.BindLocation(requestURI)
+	c.PathPrefix = path
 }
 
 // Upstream specifies an UpstreamProvider to use when finding the destination
@@ -45,5 +52,5 @@ func (c *Config) Bind(urlStr string) error {
 // upstream server. `Random(urls)` or `RoundRobin(urls)` can be used to choose
 // from a fixed set of servers. Other implementations exist.
 func (c *Config) Upstream(u UpstreamProvider) {
-	c.UpstreamProvider = u
+	c.Director.UpstreamProvider = u
 }

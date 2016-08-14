@@ -2,6 +2,7 @@ package locus
 
 import (
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"testing"
 )
@@ -22,8 +23,17 @@ func mustReq(rawurl string) *http.Request {
 	return r
 }
 
+func mustDump(req *http.Request) string {
+	d, err := httputil.DumpRequest(req, false)
+	if err != nil {
+		panic(err)
+	}
+	return "Parsed URL: " + req.URL.String() + "\n" +
+		"Dump: " + string(d)
+}
+
 func checkError(t *testing.T, err error, str string) {
 	if err != nil {
-		t.Errorf("unexpected error: %s: %s", str, err)
+		t.Fatalf("unexpected error: %s: %s", str, err)
 	}
 }
