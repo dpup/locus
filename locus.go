@@ -137,6 +137,7 @@ func (locus *Locus) ListenAndServe() error {
 		ReadTimeout:    locus.ReadTimeout,
 		WriteTimeout:   locus.WriteTimeout,
 		MaxHeaderBytes: 1 << 20,
+		ErrorLog:       locus.ErrorLog,
 	}
 	locus.elogf("Starting Locus on port %d", locus.Port)
 	return s.ListenAndServe()
