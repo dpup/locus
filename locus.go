@@ -2,6 +2,7 @@
 package locus
 
 import (
+	_ "expvar"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -179,6 +180,10 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	} else if req.URL.Path == "/debug/configs" {
 		tmpl.ConfigsTemplate.Execute(rw, locus)
 		locus.logDefaultReq(rrw, req)
+
+	} else if req.URL.Path == "/debug/vars" {
+		// In Go1.8 add expvars handler directly. See https://github.com/golang/go/issues/15030
+		http.DefaultServeMux.ServeHTTP(rw, req)
 
 		// For legacy healthchecking, render 200 on root path.
 	} else if req.URL.Path == "/" {
