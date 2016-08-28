@@ -189,24 +189,29 @@ func upstreamFromYAML(site yamlSiteConfig) (upstream.Provider, error) {
 		return nil, errors.New("must specify one of 'upstream' or 'upstream_set' not both")
 	} else if site.UpstreamSet != nil {
 		s = upstream.FixedSet(site.UpstreamSet...)
-	} else {
-		if strings.Contains(site.Upstream, "//") {
-			// Looks like full URL so treat as single upstream
-			s = upstream.FixedSet(site.Upstream)
-		} else {
-			// Otherwise assume upstream is a host and use it for a DNS provider.
-			ds := &upstream.DNSSet{
-				DNSHost:    site.Upstream,
-				Port:       80,
-				PathPrefix: site.UpstreamPath,
-				AllowStale: site.AllowStale,
-				TTL:        site.TTL,
-			}
-			if site.UpstreamPort != 0 {
-				ds.Port = site.UpstreamPort
-			}
-			s = ds
+	} else if strings.HasPrefix(site.Upstream, "ecs://") {
+		// Upstream is a service running on ECS.
+		es, err := upstream.ECS(site.Upstream)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create ECS upstream: %s", err)
 		}
+		s = es
+	} else if strings.Contains(site.Upstream, "//") {
+		// Looks like full URL so treat as single upstream
+		s = upstream.FixedSet(site.Upstream)
+	} else {
+		// Otherwise assume upstream is a host and use it for a DNS provider.
+		ds := &upstream.DNSSet{
+			DNSHost:    site.Upstream,
+			Port:       80,
+			PathPrefix: site.UpstreamPath,
+			AllowStale: site.AllowStale,
+			TTL:        site.TTL,
+		}
+		if site.UpstreamPort != 0 {
+			ds.Port = site.UpstreamPort
+		}
+		s = ds
 	}
 
 	// Pre-emptively check there are no errors fetching upstreams. For fixed, this
