@@ -2,6 +2,8 @@ package locus
 
 import (
 	"net/url"
+
+	"github.com/dpup/locus/upstream"
 )
 
 // Config specifies what requests to handle, how to direct the request, and
@@ -48,9 +50,9 @@ func (c *Config) BindLocation(requestURI string) {
 // Upstream specifies an UpstreamProvider to use when finding the destination
 // server.
 //
-// `Single("http://dest.com")` can be used to route requests to a single
-// upstream server. `Random(urls)` or `RoundRobin(urls)` can be used to choose
-// from a fixed set of servers. Other implementations exist.
-func (c *Config) Upstream(u UpstreamProvider) {
+// `upstream.Single("http://dest.com")` can be used to route requests to a single
+// upstream server. `Random(FixedSet(urls))` or `RoundRobin(FixedSet(urls))` can
+// be used to choose from a fixed set of servers. Other implementations exist.
+func (c *Config) Upstream(u upstream.Provider) {
 	c.Director.UpstreamProvider = u
 }

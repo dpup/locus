@@ -53,29 +53,23 @@ func TestLoadConfig(t *testing.T) {
 	}
 
 	// Verify the third site uses DNS.
-	if ds, ok := fallthru.UpstreamProvider.(*DNSSet); ok {
-		actual3, err := ds.All()
-		expected3 := []*url.URL{
-			mustParseURL("http://192.168.0.0:4000/2016/mysite/"),
-			mustParseURL("http://192.168.0.1:4000/2016/mysite/"),
-			mustParseURL("http://192.168.0.2:4000/2016/mysite/"),
-			mustParseURL("http://192.168.0.3:4000/2016/mysite/"),
-		}
-		checkError(t, err, "fetching 'fallthru' upstreams")
-		if !reflect.DeepEqual(actual3, expected3) {
-			t.Errorf("Unexpected upstreams, expected '%s' was '%s'", expected3, actual3)
-		}
-		if !ds.RoundRobin {
-			t.Errorf("Expected RoundRobin to be true, was false")
-		}
-		if !ds.AllowStale {
-			t.Errorf("Expected AllowStale to be true, was false")
-		}
-		if ds.TTL != time.Minute*5 {
-			t.Errorf("Expected TTL to be 5m, was %s", ds.TTL)
-		}
-	} else {
-		t.Errorf("Expected fallthru to have DNS provider, was %v", fallthru)
+	actual3, err := fallthru.UpstreamProvider.All()
+	expected3 := []*url.URL{
+		mustParseURL("http://192.168.0.0:4000/2016/mysite/"),
+		mustParseURL("http://192.168.0.1:4000/2016/mysite/"),
+		mustParseURL("http://192.168.0.2:4000/2016/mysite/"),
+		mustParseURL("http://192.168.0.3:4000/2016/mysite/"),
+	}
+	checkError(t, err, "fetching 'fallthru' upstreams")
+	if !reflect.DeepEqual(actual3, expected3) {
+		t.Errorf("Unexpected upstreams, expected '%s' was '%s'", expected3, actual3)
+	}
+	info := fallthru.UpstreamProvider.DebugInfo()
+	if info["allow stale"] != "true" {
+		t.Errorf("Expected AllowStale to be true, was %s", info["allow_stale"])
+	}
+	if info["TTL"] != "5m0s" {
+		t.Errorf("Expected TTL to be 5m0s, was %s", info["TTL"])
 	}
 
 	// Check that global AddHeader set.

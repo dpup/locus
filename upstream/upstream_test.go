@@ -1,15 +1,15 @@
-package locus
+package upstream
 
 import (
 	"testing"
 )
 
 func TestRoundRobin(t *testing.T) {
-	provider := RoundRobin([]string{
+	provider := RoundRobin(FixedSet(
 		"back-1.test.com",
 		"back-2.test.com",
 		"back-3.test.com",
-	})
+	))
 
 	if u, _ := provider.Get(nil); u.String() != "back-1.test.com" {
 		t.Error("First call to get should return 'back-1'")

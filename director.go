@@ -3,6 +3,8 @@ package locus
 import (
 	"net/http"
 	"strings"
+
+	"github.com/dpup/locus/upstream"
 )
 
 // Director specifies how to direct a request to an upstream backend.
@@ -14,7 +16,7 @@ type Director struct {
 
 	// UpstreamProvider is used to fetch a list of candidate upstreams to proxy
 	// the request to.
-	UpstreamProvider UpstreamProvider
+	UpstreamProvider upstream.Provider
 
 	stripHeaders []string
 	setHeaders   map[string]string

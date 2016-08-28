@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/dpup/locus"
+	"github.com/dpup/locus/upstream"
 	"net/http"
 )
 
@@ -13,7 +14,7 @@ func main() {
 	// open http://localhost:5555/news/world-middle-east-36932694
 	bbc := proxy.NewConfig()
 	bbc.Bind("/news")
-	bbc.Upstream(locus.Single("http://www.bbc.com/news"))
+	bbc.Upstream(upstream.Single("http://www.bbc.com/news"))
 	bbc.StripHeader("Cookie") // Avoid fowarding localhost cookies.
 	bbc.SetHeader("Host", "www.bbc.com")
 	bbc.SetHeader("Referer", "http://www.bbc.com/news")
@@ -21,7 +22,7 @@ func main() {
 	// open localhost:5555/wiki/England
 	wiki := proxy.NewConfig()
 	wiki.Bind("/wiki")
-	wiki.Upstream(locus.Random([]string{
+	wiki.Upstream(upstream.Random([]string{
 		"https://en.wikipedia.org",
 		"https://www.wikipedia.org",
 	}))
@@ -32,14 +33,14 @@ func main() {
 	// open localhost:5555/amazon/dogs
 	amazon := proxy.NewConfig()
 	amazon.Bind("/amazon")
-	amazon.Upstream(locus.DNS("amazon.com", 80, "/404")) // Force a 404 to avoid canonical redirects in demo.
+	amazon.Upstream(upstream.DNS("amazon.com", 80, "/404")) // Force a 404 to avoid canonical redirects in demo.
 	amazon.StripHeader("Cookie")
 	amazon.SetHeader("Host", "www.amazon.com")
 
 	// open http://localhost:5555/goog/search?q=wunderbar
 	goog := proxy.NewConfig()
 	goog.Bind("/goog")
-	goog.Upstream(locus.Single("http://www.google.com/"))
+	goog.Upstream(upstream.Single("http://www.google.com/"))
 	goog.Redirect = http.StatusFound
 
 	panic(proxy.ListenAndServe())

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dpup/locus/upstream"
 	"gopkg.in/yaml.v2"
 )
 
@@ -47,7 +48,7 @@ sites:
   # handles all other requests to mysite.com. A single upstream without a scheme
   # demarks a DNS upstream.
   - name: fallthrough
-    bind_host: mysite.com
+    bind_host: fallthru.mysite.com
     upstream: dns.test.fake
     upstream_port: 4000
     upstream_path: /2016/mysite/
@@ -178,46 +179,46 @@ func siteFromYAML(site yamlSiteConfig, cfg *Config) error {
 	return nil
 }
 
-func upstreamFromYAML(site yamlSiteConfig) (UpstreamProvider, error) {
+func upstreamFromYAML(site yamlSiteConfig) (upstream.Provider, error) {
 	// Because of lack of polymorphic YAML entries, there are two possible places
 	// to look for upstreams. But the presence of both is invalid.
-	var u UpstreamProvider
+	var s upstream.Source
 	if site.Upstream == "" && site.UpstreamSet == nil {
 		return nil, nil
 	} else if site.Upstream != "" && site.UpstreamSet != nil {
 		return nil, errors.New("must specify one of 'upstream' or 'upstream_set' not both")
-	} else if site.UpstreamSet != nil && site.RoundRobin {
-		u = RoundRobin(site.UpstreamSet)
 	} else if site.UpstreamSet != nil {
-		u = Random(site.UpstreamSet)
+		s = upstream.FixedSet(site.UpstreamSet...)
 	} else {
 		if strings.Contains(site.Upstream, "//") {
 			// Looks like full URL so treat as single upstream
-			u = Single(site.Upstream)
+			s = upstream.FixedSet(site.Upstream)
 		} else {
 			// Otherwise assume upstream is a host and use it for a DNS provider.
-			ds := &DNSSet{
+			ds := &upstream.DNSSet{
 				DNSHost:    site.Upstream,
 				Port:       80,
 				PathPrefix: site.UpstreamPath,
-				RoundRobin: site.RoundRobin,
 				AllowStale: site.AllowStale,
 				TTL:        site.TTL,
 			}
 			if site.UpstreamPort != 0 {
 				ds.Port = site.UpstreamPort
 			}
-			u = ds
+			s = ds
 		}
 	}
 
 	// Pre-emptively check there are no errors fetching upstreams. For fixed, this
 	// is simply verifying the URLs are valid. For others it'll make a request for
 	// the upstreams.
-	_, err := u.All()
+	_, err := s.All()
 	if err != nil {
 		return nil, fmt.Errorf("invalid upstream: %s", err)
 	}
 
-	return u, nil
+	if site.RoundRobin {
+		return upstream.RoundRobin(s), nil
+	}
+	return upstream.Random(s), nil
 }

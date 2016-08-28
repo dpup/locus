@@ -3,11 +3,13 @@ package locus
 import (
 	"net/http"
 	"testing"
+
+	"github.com/dpup/locus/upstream"
 )
 
 func TestPathForwarding(t *testing.T) {
 	dir := Director{
-		UpstreamProvider: Single("https://google.com:4000"),
+		UpstreamProvider: upstream.Single("https://google.com:4000"),
 		PathPrefix:       "/search",
 	}
 
@@ -28,7 +30,7 @@ func TestPathForwarding(t *testing.T) {
 
 func TestPath(t *testing.T) {
 	dir := Director{
-		UpstreamProvider: Single("https://en.wikipedia.org/wiki/"),
+		UpstreamProvider: upstream.Single("https://en.wikipedia.org/wiki/"),
 		PathPrefix:       "/stuff",
 	}
 
@@ -43,7 +45,7 @@ func TestPath(t *testing.T) {
 
 func TestPathNoTrailingSlash(t *testing.T) {
 	dir := Director{
-		UpstreamProvider: Single("http://www.bbc.com/news"),
+		UpstreamProvider: upstream.Single("http://www.bbc.com/news"),
 		PathPrefix:       "/",
 	}
 
@@ -58,7 +60,7 @@ func TestPathNoTrailingSlash(t *testing.T) {
 
 func TestHeaders(t *testing.T) {
 	dir := Director{
-		UpstreamProvider: Single("https://en.wikipedia.org/wiki/"),
+		UpstreamProvider: upstream.Single("https://en.wikipedia.org/wiki/"),
 		PathPrefix:       "/stuff",
 	}
 	dir.StripHeader("Cookie")
