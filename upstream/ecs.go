@@ -63,7 +63,7 @@ func (e *ECSSet) DebugInfo() map[string]string {
 		m["error at"] = e.errAt.Format(time.Stamp)
 	}
 	for i, t := range e.tasks {
-		m[fmt.Sprintf("task %d", i)] = t.String()
+		m[fmt.Sprintf("ecs task #%d", i)] = t.String()
 	}
 	return m
 }

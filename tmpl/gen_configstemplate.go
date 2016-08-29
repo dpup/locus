@@ -84,16 +84,15 @@ Site:
 <td>binding:</td>
 <td>{{.Matcher}}</td>
 </tr>
+{{range $i, $v := .UpstreamProvider.All}}
 <tr>
-<td>upstream:</td>
-<td>{{range .UpstreamProvider.All}}
-{{.}}<br>
-{{end}}
-</td>
+<td>upstream #{{$i}}:</td>
+<td>{{$v}}</td>
 </tr>
+{{end}}
 {{range $k, $v :=.UpstreamProvider.DebugInfo}}
 <tr>
-<td>upstream {{$k}}:</td>
+<td>{{$k}}:</td>
 <td>{{$v}}</td>
 </tr>
 {{end}}

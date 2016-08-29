@@ -2,6 +2,7 @@
 package upstream
 
 import (
+	"hash/fnv"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -76,4 +77,33 @@ func (p *provider) Get(req *http.Request) (*url.URL, error) {
 		return nil, err
 	}
 	return p.pickFn(urls), nil
+}
+
+// IPHash returns an Provider that sends traffic to a consistent backend based
+// on a hash of the requesting IP (via X-Forwarded-For or Remote_Addr).
+func IPHash(source Source) Provider {
+	return &ipHashProvider{Source: source}
+}
+
+type ipHashProvider struct {
+	Source
+}
+
+func (p *ipHashProvider) Get(req *http.Request) (*url.URL, error) {
+	urls, err := p.All()
+	if err != nil {
+		return nil, err
+	}
+
+	h := fnv.New32()
+	h.Write([]byte(clientIP(req)))
+
+	return urls[int(h.Sum32())%len(urls)], nil
+}
+
+func clientIP(req *http.Request) string {
+	if h := req.Header.Get("X-Forwarded-For"); h != "" {
+		return h
+	}
+	return req.RemoteAddr
 }
