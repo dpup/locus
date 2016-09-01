@@ -11,7 +11,8 @@ import (
 	"github.com/dpup/esu"
 )
 
-// ECS is a...
+// ECS is an upstream source that can be used to direct requests to tasks
+// running on ECS.
 // loc: ecs://service.cluster.us-east-1/foo/bar/baz
 func ECS(loc string) (*ECSSet, error) {
 	u, err := url.Parse(loc)
