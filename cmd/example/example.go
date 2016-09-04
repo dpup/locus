@@ -22,10 +22,10 @@ func main() {
 	// open localhost:5555/wiki/England
 	wiki := proxy.NewConfig()
 	wiki.Bind("/wiki")
-	wiki.Upstream(upstream.Random([]string{
+	wiki.Upstream(upstream.Random(upstream.FixedSet(
 		"https://en.wikipedia.org",
 		"https://www.wikipedia.org",
-	}))
+	)))
 	wiki.StripHeader("Cookie")
 	wiki.SetHeader("Host", "en.wikipedia.org")
 	wiki.SetHeader("Referer", "https://en.wikipedia.org/wiki/Main_Page")
@@ -33,7 +33,7 @@ func main() {
 	// open localhost:5555/amazon/dogs
 	amazon := proxy.NewConfig()
 	amazon.Bind("/amazon")
-	amazon.Upstream(upstream.DNS("amazon.com", 80, "/404")) // Force a 404 to avoid canonical redirects in demo.
+	amazon.Upstream(upstream.RoundRobin(&upstream.DNS{Host: "amazon.com", Path: "/404"}))
 	amazon.StripHeader("Cookie")
 	amazon.SetHeader("Host", "www.amazon.com")
 

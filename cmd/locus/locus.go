@@ -1,11 +1,13 @@
 package main
 
 import (
+	_ "expvar"
 	"flag"
 	"log"
 	"os"
 
 	"github.com/dpup/locus"
+	_ "github.com/dpup/locus/upstream/ecs"
 )
 
 var conf = flag.String("conf", "/etc/locus.conf", "Location of config file.")

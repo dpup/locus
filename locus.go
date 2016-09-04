@@ -2,7 +2,6 @@
 package locus
 
 import (
-	_ "expvar"
 	"fmt"
 	"io/ioutil"
 	"log"

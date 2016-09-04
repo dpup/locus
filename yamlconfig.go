@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/dpup/locus/upstream"
@@ -50,10 +49,11 @@ sites:
   - name: fallthrough
     bind_host: fallthru.mysite.com
     upstream: dns.test.fake
-    upstream_port: 4000
-    upstream_path: /2016/mysite/
-    ttl: 5m
-    allow_stale: true
+    upstream_settings:
+      port: 4000
+      path: /2016/mysite/
+      ttl: 5m
+      allow_stale: true
     round_robin: true
   # 'redirect' will redirect any non-matched subdomains to the fallthrough route
   # above.
@@ -73,21 +73,18 @@ type globalSettings struct {
 }
 
 type yamlSiteConfig struct {
-	Name         string            `yaml:"name"`
-	Bind         string            `yaml:"bind"`
-	BindHost     string            `yaml:"bind_host"`
-	BindLocation string            `yaml:"bind_location"`
-	Upstream     string            `yaml:"upstream"`
-	UpstreamSet  []string          `yaml:"upstream_set"`
-	RoundRobin   bool              `yaml:"round_robin"`
-	UpstreamPath string            `yaml:"upstream_path"` // For DNS upstream only
-	UpstreamPort uint16            `yaml:"upstream_port"` // For DNS upstream only
-	TTL          time.Duration     `yaml:"ttl"`           // For DNS upstream only
-	AllowStale   bool              `yaml:"allow_stale"`   // For DNS upstream only
-	AddHeaders   map[string]string `yaml:"add_header"`
-	SetHeaders   map[string]string `yaml:"set_header"`
-	StripHeaders []string          `yaml:"strip_header"`
-	Redirect     int               `yaml:"redirect"`
+	Name             string            `yaml:"name"`
+	Bind             string            `yaml:"bind"`
+	BindHost         string            `yaml:"bind_host"`
+	BindLocation     string            `yaml:"bind_location"`
+	RoundRobin       bool              `yaml:"round_robin"`
+	Upstream         string            `yaml:"upstream"`
+	UpstreamSet      []string          `yaml:"upstream_set"`
+	UpstreamSettings map[string]string `yaml:"upstream_settings"`
+	AddHeaders       map[string]string `yaml:"add_header"`
+	SetHeaders       map[string]string `yaml:"set_header"`
+	StripHeaders     []string          `yaml:"strip_header"`
+	Redirect         int               `yaml:"redirect"`
 }
 
 type yamlConfig struct {
@@ -189,29 +186,12 @@ func upstreamFromYAML(site yamlSiteConfig) (upstream.Provider, error) {
 		return nil, errors.New("must specify one of 'upstream' or 'upstream_set' not both")
 	} else if site.UpstreamSet != nil {
 		s = upstream.FixedSet(site.UpstreamSet...)
-	} else if strings.HasPrefix(site.Upstream, "ecs://") {
-		// Upstream is a service running on ECS.
-		es, err := upstream.ECS(site.Upstream)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create ECS upstream: %s", err)
-		}
-		s = es
-	} else if strings.Contains(site.Upstream, "//") {
-		// Looks like full URL so treat as single upstream
-		s = upstream.FixedSet(site.Upstream)
 	} else {
-		// Otherwise assume upstream is a host and use it for a DNS provider.
-		ds := &upstream.DNSSet{
-			DNSHost:    site.Upstream,
-			Port:       80,
-			PathPrefix: site.UpstreamPath,
-			AllowStale: site.AllowStale,
-			TTL:        site.TTL,
+		ss, err := upstream.Get(site.Upstream, site.UpstreamSettings)
+		if err != nil {
+			return nil, err
 		}
-		if site.UpstreamPort != 0 {
-			ds.Port = site.UpstreamPort
-		}
-		s = ds
+		s = ss
 	}
 
 	// Pre-emptively check there are no errors fetching upstreams. For fixed, this

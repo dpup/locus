@@ -5,27 +5,62 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 )
 
-// DNS returns an upstream source that looks up hosts via DNS.
-//
-// Example use:
-//     cfg.Upstream(Random(DNS("amazon.com", 80, "/")))
-//
-func DNS(dnsHost string, port uint16, pathPrefix string) *DNSSet {
-	return &DNSSet{DNSHost: dnsHost, Port: port, PathPrefix: pathPrefix}
+// Register an upstream factor that matches hostnames on the form foo.bar.baz
+func init() {
+	Register(
+		`^[[:alnum:]][[:alnum:]\.\-]+[[:alnum:]]$`,
+		func(host string, settings map[string]string) (Source, error) {
+			var port uint16 = 80
+			var ttl time.Duration
+			var allowStale bool
+
+			if p, ok := settings["port"]; ok {
+				pi, err := strconv.ParseInt(p, 10, 16)
+				if err != nil {
+					return nil, fmt.Errorf("invalid port '%s', %s", p, err)
+				}
+				port = uint16(pi)
+			}
+
+			if a, ok := settings["allow_stale"]; ok {
+				ai, err := strconv.ParseBool(a)
+				if err != nil {
+					return nil, fmt.Errorf("invalid boolean for allow_stale '%s', %s", a, err)
+				}
+				allowStale = ai
+			}
+
+			if t, ok := settings["ttl"]; ok {
+				ti, err := time.ParseDuration(t)
+				if err != nil {
+					return nil, fmt.Errorf("invalid duration for ttl, '%s', %s", t, err)
+				}
+				ttl = ti
+			}
+
+			return &DNS{
+				Host:       host,
+				Port:       port,
+				Path:       settings["path"],
+				AllowStale: allowStale,
+				TTL:        ttl,
+			}, nil
+		})
 }
 
 // DefaultDNSTTL is 1 minute.
 const DefaultDNSTTL = time.Minute
 
-// FakeDNSHost is hardcoded not to hit the actual DNS resolver, instead
+// FakeHost is hardcoded not to hit the actual DNS resolver, instead
 // returning a set of local IPs.
-const FakeDNSHost = "dns.test.fake"
+const FakeHost = "dns.test.fake"
 
-// DNSSet is an upstream source that looks up hosts from DNS.
+// DNS is an upstream source that looks up hosts from DNS.
 //
 // If AllowStale is true, an old list of upstreams will be used following a
 // failed refresh. If AllowStale is false, the error will be propagated to
@@ -33,10 +68,10 @@ const FakeDNSHost = "dns.test.fake"
 //
 // The default TTL for entries is 1 minute, to override, set the TTL field. Once
 // TTL has expired, requests will block on refreshing the upstreams.
-type DNSSet struct {
-	DNSHost    string
+type DNS struct {
+	Host       string
 	Port       uint16
-	PathPrefix string
+	Path       string
 	AllowStale bool
 	TTL        time.Duration
 
@@ -47,7 +82,7 @@ type DNSSet struct {
 }
 
 // DebugInfo returns extra fields to show on /debug/configs
-func (ds *DNSSet) DebugInfo() map[string]string {
+func (ds *DNS) DebugInfo() map[string]string {
 	m := map[string]string{}
 	if ds.err != nil {
 		m["error"] = ds.err.Error()
@@ -59,19 +94,19 @@ func (ds *DNSSet) DebugInfo() map[string]string {
 }
 
 // All returns all upsteams.
-func (ds *DNSSet) All() ([]*url.URL, error) {
+func (ds *DNS) All() ([]*url.URL, error) {
 	ds.maybeRefresh()
 	return ds.addrs, ds.err
 }
 
-func (ds *DNSSet) ttl() time.Duration {
+func (ds *DNS) ttl() time.Duration {
 	if ds.TTL == 0 {
 		return DefaultDNSTTL
 	}
 	return ds.TTL
 }
 
-func (ds *DNSSet) maybeRefresh() {
+func (ds *DNS) maybeRefresh() {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
@@ -81,14 +116,14 @@ func (ds *DNSSet) maybeRefresh() {
 	}
 
 	var addrs []string
-	if ds.DNSHost == FakeDNSHost {
+	if ds.Host == FakeHost {
 		addrs = []string{"192.168.0.0", "192.168.0.1", "192.168.0.2", "192.168.0.3"}
 	} else {
 		var err error
-		addrs, err = net.LookupHost(ds.DNSHost)
+		addrs, err = net.LookupHost(ds.Host)
 		if err != nil {
 			if ds.AllowStale && len(ds.addrs) != 0 {
-				log.Printf("error looking up %s, using stale upstreams", ds.DNSHost)
+				log.Printf("error looking up %s, using stale upstreams", ds.Host)
 			} else {
 				ds.addrs = nil
 				ds.err = err
@@ -97,7 +132,7 @@ func (ds *DNSSet) maybeRefresh() {
 		}
 	}
 
-	log.Printf("dns refreshed for %s, %d upstream(s) found", ds.DNSHost, len(addrs))
+	log.Printf("dns refreshed for %s, %d upstream(s) found", ds.Host, len(addrs))
 
 	ds.addrs = make([]*url.URL, len(addrs))
 	for i, addr := range addrs {
@@ -110,7 +145,7 @@ func (ds *DNSSet) maybeRefresh() {
 		ds.addrs[i] = &url.URL{
 			Scheme: scheme,
 			Host:   fmt.Sprintf("%s:%d", addr, ds.Port),
-			Path:   ds.PathPrefix,
+			Path:   ds.Path,
 		}
 	}
 

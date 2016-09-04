@@ -30,11 +30,6 @@ type Source interface {
 	DebugInfo() map[string]string
 }
 
-// Single returns a provider that only has one upstream.
-func Single(urlStr string) Provider {
-	return First(FixedSet(urlStr))
-}
-
 // First returns an upstream Provider that always uses the first upstream in a
 // Source.
 func First(source Source) Provider {
