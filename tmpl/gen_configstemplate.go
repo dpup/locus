@@ -46,6 +46,12 @@ border-bottom: 0.3rem solid rgb(50, 50, 50);
 font-weight: bold;
 font-size: 1.2rem;
 }
+
+td span {
+display: inline-block;
+width: 7rem;
+}
+
 </style>
 </head>
 <body>
@@ -68,6 +74,25 @@ font-size: 1.2rem;
 <tr>
 <td>verbose logging:</td>
 <td>{{.VerboseLogging}}</td>
+</tr>
+<tr>
+<td>requests:</td>
+<td>
+<span>count:</span> {{.RequestMeter.Count}}<br>
+<span>1-min rate:</span> {{.RequestMeter.Rate1 | printf "%.2f"}}<br>
+<span>5-min rate:</span> {{.RequestMeter.Rate5 | printf "%.2f"}}<br>
+<span>15-min rate:</span> {{.RequestMeter.Rate15 | printf "%.2f"}}<br>
+<span>mean rate:</span> {{.RequestMeter.RateMean | printf "%.2f"}}
+</td>
+</tr>
+<tr>
+<td>errors:</td>
+<td>
+<span>count:</span> {{.ErrorMeter.Count}}<br>
+<span>1-min rate:</span> {{.ErrorMeter.Rate1 | printf "%.2f"}}<br>
+<span>5-min rate:</span> {{.ErrorMeter.Rate5 | printf "%.2f"}}<br>
+<span>15-min rate:</span> {{.ErrorMeter.Rate15 | printf "%.2f"}}
+</td>
 </tr>
 {{range .Configs}}
 <tr>

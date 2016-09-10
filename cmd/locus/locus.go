@@ -20,6 +20,7 @@ func main() {
 		log.Println(err)
 		os.Exit(1)
 	}
+	proxy.RegisterMetricsWithDefaultRegistry()
 	if err := proxy.ListenAndServe(); err != nil {
 		log.Println(err)
 		os.Exit(1)

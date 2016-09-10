@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/dpup/locus/tmpl"
+
+	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics/exp"
 )
 
 // HostOverrideParam param that when specified in the querystring overrides the
@@ -45,6 +48,9 @@ type Locus struct {
 	// Configs is a list of sites that locus will forward for.
 	Configs []*Config
 
+	RequestMeter metrics.Meter
+	ErrorMeter   metrics.Meter
+
 	proxy *reverseProxy
 }
 
@@ -53,13 +59,17 @@ type Locus struct {
 // ReadTimeout = 30s
 // WriteTimeout = 30s
 func New() *Locus {
-	return &Locus{
-		proxy:        &reverseProxy{},
+	locus := &Locus{
 		Configs:      []*Config{},
 		Port:         5555,
 		ReadTimeout:  time.Second * 30,
 		WriteTimeout: time.Second * 30,
+
+		proxy:        &reverseProxy{},
+		RequestMeter: metrics.NewMeter(),
+		ErrorMeter:   metrics.NewMeter(),
 	}
+	return locus
 }
 
 // FromConfig creates a new locus server from YAML config.
@@ -144,6 +154,7 @@ func (locus *Locus) ListenAndServe() error {
 
 func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	locus.maybeApplyHostOverride(req)
+	locus.RequestMeter.Mark(1)
 
 	rrw := &recordingResponseWriter{ResponseWriter: rw}
 
@@ -196,6 +207,20 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// RegisterMetrics adds locus metrics to the metrics registry.
+func (locus *Locus) RegisterMetrics(m metrics.Registry) {
+	m.Register("requests", locus.RequestMeter)
+	m.Register("errors", locus.ErrorMeter)
+
+	exp.Exp(m)
+	go metrics.Log(m, 60*time.Second, locus.ErrorLog)
+}
+
+// RegisterMetricsWithDefaultRegistry registers metrics with the default registry.
+func (locus *Locus) RegisterMetricsWithDefaultRegistry() {
+	locus.RegisterMetrics(metrics.DefaultRegistry)
+}
+
 func (locus *Locus) maybeApplyHostOverride(req *http.Request) {
 	q := req.URL.Query()
 	overrideParam := q.Get(HostOverrideParam)
@@ -218,6 +243,9 @@ func (locus *Locus) findConfig(req *http.Request) *Config {
 }
 
 func (locus *Locus) renderError(rw http.ResponseWriter, status int) {
+	if status >= 500 {
+		locus.ErrorMeter.Mark(1)
+	}
 	rw.WriteHeader(status)
 	tmpl.ErrorTemplate.Execute(rw, struct {
 		Status int
