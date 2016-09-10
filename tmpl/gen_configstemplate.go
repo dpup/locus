@@ -79,22 +79,34 @@ width: 7rem;
 <td colspan="2">Metrics</td>
 </tr>
 <tr>
+<td>active connections:</td>
+<td>{{.Connections.Count}}</td>
+</tr>
+<tr>
 <td>requests:</td>
 <td>
-<span>count:</span> {{.RequestMeter.Count}}<br>
-<span>1-min rate:</span> {{.RequestMeter.Rate1 | printf "%.2f"}}<br>
-<span>5-min rate:</span> {{.RequestMeter.Rate5 | printf "%.2f"}}<br>
-<span>15-min rate:</span> {{.RequestMeter.Rate15 | printf "%.2f"}}<br>
-<span>mean rate:</span> {{.RequestMeter.RateMean | printf "%.2f"}}
+<span>count:</span> {{.Requests.Count}}<br>
+<span>1-min rate:</span> {{.Requests.Rate1 | printf "%.2f"}}<br>
+<span>5-min rate:</span> {{.Requests.Rate5 | printf "%.2f"}}<br>
+<span>15-min rate:</span> {{.Requests.Rate15 | printf "%.2f"}}<br>
+<span>mean rate:</span> {{.Requests.RateMean | printf "%.2f"}}
 </td>
 </tr>
 <tr>
-<td>errors:</td>
+<td>5xx errors:</td>
 <td>
-<span>count:</span> {{.ErrorMeter.Count}}<br>
-<span>1-min rate:</span> {{.ErrorMeter.Rate1 | printf "%.2f"}}<br>
-<span>5-min rate:</span> {{.ErrorMeter.Rate5 | printf "%.2f"}}<br>
-<span>15-min rate:</span> {{.ErrorMeter.Rate15 | printf "%.2f"}}
+<span>count:</span> {{.Errors.Count}}<br>
+<span>1-min rate:</span> {{.Errors.Rate1 | printf "%.2f"}}<br>
+<span>5-min rate:</span> {{.Errors.Rate5 | printf "%.2f"}}<br>
+<span>15-min rate:</span> {{.Errors.Rate15 | printf "%.2f"}}
+</td>
+</tr>
+<tr>
+<td>latency:</td>
+<td>
+<span>min:</span> {{.Latency.Min}}<br>
+<span>max:</span> {{.Latency.Max}}<br>
+<span>avg:</span> {{.Latency.Mean | printf "%.0f"}}
 </td>
 </tr>
 {{range .Configs}}

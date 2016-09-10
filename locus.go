@@ -48,8 +48,10 @@ type Locus struct {
 	// Configs is a list of sites that locus will forward for.
 	Configs []*Config
 
-	RequestMeter metrics.Meter
-	ErrorMeter   metrics.Meter
+	Requests    metrics.Meter
+	Errors      metrics.Meter
+	Connections metrics.Counter
+	Latency     metrics.Histogram
 
 	proxy *reverseProxy
 }
@@ -65,9 +67,11 @@ func New() *Locus {
 		ReadTimeout:  time.Second * 30,
 		WriteTimeout: time.Second * 30,
 
-		proxy:        &reverseProxy{},
-		RequestMeter: metrics.NewMeter(),
-		ErrorMeter:   metrics.NewMeter(),
+		proxy:       &reverseProxy{},
+		Requests:    metrics.NewMeter(),
+		Errors:      metrics.NewMeter(),
+		Connections: metrics.NewCounter(),
+		Latency:     metrics.NewHistogram(metrics.NewExpDecaySample(1028, 0.015)),
 	}
 	return locus
 }
@@ -154,7 +158,14 @@ func (locus *Locus) ListenAndServe() error {
 
 func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	locus.maybeApplyHostOverride(req)
-	locus.RequestMeter.Mark(1)
+
+	locus.Requests.Mark(1)
+	locus.Connections.Inc(1)
+	now := time.Now()
+	defer func() {
+		locus.Connections.Dec(1)
+		locus.Latency.Update(int64(time.Since(now) / time.Millisecond))
+	}()
 
 	rrw := &recordingResponseWriter{ResponseWriter: rw}
 
@@ -209,8 +220,10 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 // RegisterMetrics adds locus metrics to the metrics registry.
 func (locus *Locus) RegisterMetrics(m metrics.Registry) {
-	m.Register("requests", locus.RequestMeter)
-	m.Register("errors", locus.ErrorMeter)
+	m.Register("requests", locus.Requests)
+	m.Register("errors", locus.Errors)
+	m.Register("conns", locus.Connections)
+	m.Register("latency", locus.Latency)
 
 	exp.Exp(m)
 	go metrics.Log(m, 60*time.Second, locus.ErrorLog)
@@ -244,7 +257,7 @@ func (locus *Locus) findConfig(req *http.Request) *Config {
 
 func (locus *Locus) renderError(rw http.ResponseWriter, status int) {
 	if status >= 500 {
-		locus.ErrorMeter.Mark(1)
+		locus.Errors.Mark(1)
 	}
 	rw.WriteHeader(status)
 	tmpl.ErrorTemplate.Execute(rw, struct {

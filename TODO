@@ -2,6 +2,7 @@
 
 Nice to haves:
 - Healthcheck on upstreams
+- Per upstream metrics
 - Debug page shows connections, failures, etc.
 - Extend Bind / Matcher, to allow binding based on headers and other features
 - Consider using DNS for all types of upstreams, instead of decoupling.
