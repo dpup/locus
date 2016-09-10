@@ -76,6 +76,9 @@ width: 7rem;
 <td>{{.VerboseLogging}}</td>
 </tr>
 <tr>
+<td colspan="2">Metrics</td>
+</tr>
+<tr>
 <td>requests:</td>
 <td>
 <span>count:</span> {{.RequestMeter.Count}}<br>

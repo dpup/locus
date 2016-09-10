@@ -67,6 +67,9 @@ td span {
     <td>{{.VerboseLogging}}</td>
   </tr>
   <tr>
+    <td colspan="2">Metrics</td>
+  </tr>
+  <tr>
     <td>requests:</td>
     <td>
       <span>count:</span> {{.RequestMeter.Count}}<br>
@@ -77,7 +80,7 @@ td span {
     </td>
   </tr>
   <tr>
-    <td>errors:</td>
+    <td>5xx errors:</td>
     <td>
       <span>count:</span> {{.ErrorMeter.Count}}<br>
       <span>1-min rate:</span> {{.ErrorMeter.Rate1 | printf "%.2f"}}<br>
