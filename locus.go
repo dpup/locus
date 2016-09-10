@@ -152,7 +152,7 @@ func (locus *Locus) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		// Found matching config so get a request for proxying.
 		proxyreq, err := c.Direct(req)
 
-		if err != nil { // TODO: Render local error page.
+		if err != nil {
 			locus.elogf("error transforming request: %v", err)
 			locus.renderError(rrw, http.StatusInternalServerError)
 			locus.logDefaultReq(rrw, req)

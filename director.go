@@ -1,6 +1,7 @@
 package locus
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -64,6 +65,10 @@ func (d *Director) Direct(req *http.Request) (*http.Request, error) {
 	upstream, err := d.UpstreamProvider.Get(req)
 	if err != nil {
 		return nil, err
+	}
+	if upstream == nil {
+		// TODO: Make 503
+		return nil, errors.New("no upstream available")
 	}
 
 	req = copyRequest(req)
