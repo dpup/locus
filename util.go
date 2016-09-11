@@ -49,3 +49,10 @@ func newLogger(filename string) (*log.Logger, error) {
 	}
 	return log.New(io.MultiWriter(os.Stderr, file), "", log.Ldate|log.Ltime), nil
 }
+
+func remoteAddr(req *http.Request) string {
+	if ff := req.Header.Get("X-Forwarded-For"); ff != "" {
+		return ff
+	}
+	return req.RemoteAddr
+}
