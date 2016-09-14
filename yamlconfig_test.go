@@ -66,7 +66,7 @@ func TestLoadConfig(t *testing.T) {
 	}
 	info := fallthru.UpstreamProvider.DebugInfo()
 	if info["allow stale"] != "true" {
-		t.Errorf("Expected AllowStale to be true, was %s", info["allow_stale"])
+		t.Errorf("Expected AllowStale to be true, was %s", info["allow stale"])
 	}
 	if info["TTL"] != "5m0s" {
 		t.Errorf("Expected TTL to be 5m0s, was %s", info["TTL"])

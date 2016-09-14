@@ -24,6 +24,8 @@ globals:
 defaults:
   add_header:
     X-Proxied-For: Locus
+  upstream_settings:
+    allow_stale: true
 # The 'sites' section allows multiple configurations
 sites:
   # 'about_us' is a single upstream site that sets some cookies.
@@ -53,7 +55,6 @@ sites:
       port: 4000
       path: /2016/mysite/
       ttl: 5m
-      allow_stale: true
     round_robin: true
   # 'redirect' will redirect any non-matched subdomains to the fallthrough route
   # above.
@@ -87,6 +88,45 @@ type yamlSiteConfig struct {
 	Redirect         int               `yaml:"redirect"`
 }
 
+func (c *yamlSiteConfig) merge(o yamlSiteConfig) {
+	if o.Name != "" {
+		c.Name = o.Name
+	}
+	if o.Bind != "" {
+		c.Bind = o.Bind
+	}
+	if o.BindHost != "" {
+		c.BindHost = o.BindHost
+	}
+	if o.BindLocation != "" {
+		c.BindLocation = o.BindLocation
+	}
+	if o.RoundRobin {
+		c.RoundRobin = o.RoundRobin
+	}
+	if o.Upstream != "" {
+		c.Upstream = o.Upstream
+	}
+	if len(o.UpstreamSet) > 0 {
+		c.UpstreamSet = append(c.UpstreamSet, o.UpstreamSet...)
+	}
+	for k, v := range o.UpstreamSettings {
+		c.UpstreamSettings[k] = v
+	}
+	for k, v := range o.AddHeaders {
+		c.AddHeaders[k] = v
+	}
+	for k, v := range o.SetHeaders {
+		c.SetHeaders[k] = v
+	}
+	if len(o.StripHeaders) > 0 {
+		c.StripHeaders = append(c.StripHeaders, o.StripHeaders...)
+	}
+	if o.Redirect != 0 {
+		c.Redirect = o.Redirect
+	}
+}
+
 type yamlConfig struct {
 	Globals  globalSettings   `yaml:"globals"`
 	Defaults yamlSiteConfig   `yaml:"defaults"`
@@ -102,16 +142,17 @@ func loadConfigFromYAML(data []byte) ([]*Config, *globalSettings, error) {
 		return nil, nil, fmt.Errorf("error loading YAML: %s", err)
 	}
 
-	defaultCfg := &Config{}
-	err = siteFromYAML(yc.Defaults, defaultCfg)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error loading default cfg: %s", err)
-	}
-
 	for _, site := range yc.Sites {
+		c := yamlSiteConfig{
+			UpstreamSettings: map[string]string{},
+			AddHeaders:       map[string]string{},
+			SetHeaders:       map[string]string{},
+		}
+		c.merge(yc.Defaults)
+		c.merge(site)
+
 		cfg := &Config{}
-		*cfg = *defaultCfg
-		err := siteFromYAML(site, cfg)
+		err := siteFromYAML(c, cfg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error loading config: %s", err)
 		}

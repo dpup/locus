@@ -12,7 +12,9 @@ package ecs
 
 import (
 	"fmt"
+	"log"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -45,9 +47,22 @@ func init() {
 				return nil, fmt.Errorf("unable to create session for %s: %s", location, err)
 			}
 
-			e := &ECS{location: u}
-			// TODO: PathPrefix
-			// TODO: AllowStale
+			var allowStale bool
+
+			if a, ok := settings["allow_stale"]; ok {
+				ai, err := strconv.ParseBool(a)
+				if err != nil {
+					return nil, fmt.Errorf("invalid boolean for allow_stale '%s', %s", a, err)
+				}
+				allowStale = ai
+			}
+
+			e := &ECS{
+				location:   u,
+				allowStale: allowStale,
+				path:       settings["path"],
+				// TODO: AllowStale
+			}
 
 			monitor := esu.NewTaskMonitor(sess, cluster, service)
 			monitor.OnTaskChange = e.onTaskChange
@@ -60,18 +75,22 @@ func init() {
 
 // ECS is a....
 type ECS struct {
-	location *url.URL
-	tasks    []esu.TaskInfo
-	urls     []*url.URL
-	updateAt time.Time
-	err      error
-	errAt    time.Time
+	location   *url.URL
+	allowStale bool
+	path       string
+	log        *log.Logger
+	tasks      []esu.TaskInfo
+	urls       []*url.URL
+	updateAt   time.Time
+	err        error
+	errAt      time.Time
 }
 
 // DebugInfo returns extra fields to show on /debug/configs
 func (e *ECS) DebugInfo() map[string]string {
 	m := map[string]string{}
 	m["location"] = e.location.String()
+	m["allow stale"] = fmt.Sprintf("%v", e.allowStale)
 	m["last update"] = e.updateAt.Format(time.Stamp)
 	if e.err != nil {
 		// TODO: Figure out a better way of dealing with error cases.
@@ -86,7 +105,10 @@ func (e *ECS) DebugInfo() map[string]string {
 
 // All returns all upsteams.
 func (e *ECS) All() ([]*url.URL, error) {
-	return e.urls, e.err
+	if e.err != nil && !e.allowStale {
+		return nil, e.err
+	}
+	return e.urls, nil
 }
 
 func (e *ECS) onTaskChange(tasks []esu.TaskInfo) {
@@ -107,6 +129,7 @@ func (e *ECS) onTaskChange(tasks []esu.TaskInfo) {
 func (e *ECS) onMonitorError(err error) {
 	e.err = err
 	e.errAt = time.Now()
+	e.log.Printf("monitor error for %s: %v", e.location, err)
 }
 
 var sessions = map[string]*session.Session{}
