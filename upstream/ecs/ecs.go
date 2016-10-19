@@ -126,10 +126,18 @@ func (e *ECS) onTaskChange(tasks []esu.TaskInfo) {
 	}
 }
 
+func (e *ECS) logf(format string, args ...interface{}) {
+	if e.log != nil {
+		e.log.Printf(format, args...)
+	} else {
+		log.Printf(format, args...)
+	}
+}
+
 func (e *ECS) onMonitorError(err error) {
 	e.err = err
 	e.errAt = time.Now()
-	e.log.Printf("monitor error for %s: %v", e.location, err)
+	e.logf("monitor error for %s: %v", e.location, err)
 }
 
 var sessions = map[string]*session.Session{}
